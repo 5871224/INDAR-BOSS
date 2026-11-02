@@ -5,13 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>INDAR-SOYAL｜SOYAL MSG Viewer</title>
   <link rel="stylesheet" href="styles.css" />
-  <script src="/shared/auth-entry.js"></script>
+  <link rel="stylesheet" href="/shared/login.css" />
 </head>
 <body>
   <section id="accessGate" class="indar-login-gate" aria-labelledby="accessTitle">
-    <h1 id="accessTitle">SOYAL</h1>
-    <p id="accessMessage" role="status" aria-live="polite">正在確認您的 SOYAL 使用權限…</p>
-    <a class="primary access-login" href="/">返回首頁</a>
+    <p id="accessMessage" class="indar-login-message" role="status" aria-live="polite">正在確認您的 SOYAL 使用權限…</p>
+    <form id="loginForm" class="indar-login" hidden aria-labelledby="accessTitle">
+      <h1 id="accessTitle">登入</h1>
+      <p>使用班表的員工帳號登入。</p>
+      <label for="loginUser">員工代碼</label>
+      <input id="loginUser" autocomplete="username" maxlength="128" required />
+      <label for="loginPassword">密碼</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" maxlength="128" required />
+      <button id="loginButton" type="submit">登入</button>
+    </form>
   </section>
   <main class="wrap" id="appShell" hidden>
     <header>
