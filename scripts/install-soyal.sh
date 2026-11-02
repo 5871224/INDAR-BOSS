@@ -18,6 +18,8 @@ test -s "$repo/database/schema.sql"
 test -s "$env_file"
 grep -Eq '^DATABASE_URL=postgres(ql)?://[^[:space:]]+/soyal([?].*)?$' "$env_file"
 
+runuser -u indar -- /usr/local/bin/npm ci --omit=dev --ignore-scripts --prefix "$repo"
+
 install -d -o indar -g indar -m 0755 "$target"
 for file in "${files[@]}"; do
   test -s "$repo/$file"
