@@ -7,7 +7,12 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="wrap">
+  <section id="accessGate" class="access-gate" aria-labelledby="accessTitle">
+    <h1 id="accessTitle">SOYAL</h1>
+    <p id="accessMessage">正在確認您的 SOYAL 使用權限…</p>
+    <a class="primary access-login" href="/sched/">前往班表登入</a>
+  </section>
+  <main class="wrap" id="appShell" hidden>
     <header>
       <h1>INDAR-SOYAL</h1>
       <div class="header-actions">

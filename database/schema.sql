@@ -19,8 +19,18 @@ create table if not exists public.user_settings (
   constraint user_settings_user_address_key unique (user_address)
 );
 
+-- SOYAL entry permission is kept in this separate database. The employee
+-- identity is owned by INDAR 班表; only its UUID/code/name snapshot is stored.
+create table if not exists public.soyal_access (
+  employee_id uuid primary key,
+  employee_code text not null check (char_length(btrim(employee_code)) between 1 and 128),
+  employee_name text not null check (char_length(btrim(employee_name)) between 1 and 200),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 revoke all on schema public from public;
 grant usage on schema public to soyal_app;
-revoke all on public.door_settings, public.user_settings from public;
-grant select, insert, update, delete on public.door_settings, public.user_settings to soyal_app;
+revoke all on public.door_settings, public.user_settings, public.soyal_access from public;
+grant select, insert, update, delete on public.door_settings, public.user_settings, public.soyal_access to soyal_app;
 grant usage, select on sequence public.door_settings_id_seq, public.user_settings_id_seq to soyal_app;

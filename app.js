@@ -4,6 +4,7 @@ import {exportEventExcel} from './event-excel.js';
 const SETTINGS_API='./api/settings';
 const PAGE_SIZE=1000;
 const $=s=>document.querySelector(s);
+const appShell=$('#appShell'),accessGate=$('#accessGate'),accessMessage=$('#accessMessage');
 const fileInput=$('#fileInput'),pickBtn=$('#pickBtn'),dropZone=$('#dropZone'),body=$('#resultBody');
 const toolbar=$('#toolbar'),resultSection=$('#resultSection'),tableWrap=$('#tableWrap');
 const searchBox=$('#searchBox'),doorFilter=$('#doorFilter'),addressFilter=$('#addressFilter'),codeFilter=$('#codeFilter');
@@ -40,7 +41,18 @@ document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('cli
 $('#doorForm').addEventListener('submit',saveDoorSetting);$('#userForm').addEventListener('submit',saveUserSetting);
 $('#doorCancelEdit').addEventListener('click',resetDoorForm);$('#userCancelEdit').addEventListener('click',resetUserForm);
 $('#doorSettingsBody').addEventListener('click',handleDoorTableClick);$('#userSettingsBody').addEventListener('click',handleUserTableClick);
-loadSettings().catch(err=>console.error('設定資料載入失敗',err));
+checkAccess().catch(err=>showAccessError(err));
+
+async function checkAccess(){
+  const response=await fetch('./api/access',{credentials:'same-origin',cache:'no-store'});
+  let result={};try{result=await response.json();}catch{}
+  if(response.ok){accessGate.hidden=true;appShell.hidden=false;await loadSettings();return;}
+  const error=new Error(typeof result.error==='string'?result.error:'無法確認 SOYAL 使用權限');error.status=response.status;throw error;
+}
+function showAccessError(error){
+  accessMessage.textContent=error.status===401?'請先登入班表帳號，再由首頁進入 SOYAL。':error.status===403?'此帳號尚未開放使用 SOYAL，請聯絡管理員。':error.status>=500?'SOYAL 權限服務暫時無法使用，請稍後再試。':error.message;
+  accessMessage.classList.add('error');
+}
 
 async function settingsRequest(type,method='GET',payload={}){
   const url=method==='GET'?`${SETTINGS_API}?type=${encodeURIComponent(type)}`:SETTINGS_API;
