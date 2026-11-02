@@ -1,6 +1,6 @@
 import { exportDoorExcel, exportUserExcel, importDoorExcel, importUserExcel } from './excel.js';
 
-const SETTINGS_API = 'https://jblrnncqnrqtzwayxtnw.supabase.co/functions/v1/soyal-settings';
+const SETTINGS_API = './api/settings';
 const $ = selector => document.querySelector(selector);
 
 async function request(type, method = 'GET', payload = {}) {

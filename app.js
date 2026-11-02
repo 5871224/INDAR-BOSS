@@ -1,7 +1,7 @@
 import {parseBuffer,KNOWN_OFFSETS} from './parser.js';
 import {exportEventExcel} from './event-excel.js';
 
-const SETTINGS_API='https://jblrnncqnrqtzwayxtnw.supabase.co/functions/v1/soyal-settings';
+const SETTINGS_API='./api/settings';
 const PAGE_SIZE=1000;
 const $=s=>document.querySelector(s);
 const fileInput=$('#fileInput'),pickBtn=$('#pickBtn'),dropZone=$('#dropZone'),body=$('#resultBody');
