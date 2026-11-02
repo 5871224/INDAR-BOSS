@@ -10,7 +10,7 @@ repo=/home/indar/deploy/INDAR-SOYAL
 target=/srv/web/soyal
 env_file=/etc/indar-soyal/database.env
 unit=/etc/systemd/system/indar-soyal.service
-files=(index.html app.js parser.js excel.js event-excel.js settings-excel-ui.js styles.css)
+files=(index.html app.js parser.js excel.js event-excel.js settings-excel-ui.js styles.css login.css)
 
 test -s "$repo/package-lock.json"
 test -s "$repo/server.mjs"

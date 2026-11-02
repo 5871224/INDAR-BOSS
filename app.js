@@ -5,6 +5,7 @@ const SETTINGS_API='./api/settings';
 const PAGE_SIZE=1000;
 const $=s=>document.querySelector(s);
 const appShell=$('#appShell'),accessGate=$('#accessGate'),accessMessage=$('#accessMessage');
+const loginForm=$('#loginForm'),loginUser=$('#loginUser'),loginPassword=$('#loginPassword'),loginButton=$('#loginButton');
 const fileInput=$('#fileInput'),pickBtn=$('#pickBtn'),dropZone=$('#dropZone'),body=$('#resultBody');
 const toolbar=$('#toolbar'),resultSection=$('#resultSection'),tableWrap=$('#tableWrap');
 const searchBox=$('#searchBox'),doorFilter=$('#doorFilter'),addressFilter=$('#addressFilter'),codeFilter=$('#codeFilter');
@@ -41,24 +42,37 @@ document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('cli
 $('#doorForm').addEventListener('submit',saveDoorSetting);$('#userForm').addEventListener('submit',saveUserSetting);
 $('#doorCancelEdit').addEventListener('click',resetDoorForm);$('#userCancelEdit').addEventListener('click',resetUserForm);
 $('#doorSettingsBody').addEventListener('click',handleDoorTableClick);$('#userSettingsBody').addEventListener('click',handleUserTableClick);
+loginForm.addEventListener('submit',async event=>{
+  event.preventDefault();loginButton.disabled=true;accessMessage.textContent='';accessMessage.classList.remove('error');
+  try{
+    let response;
+    try{response=await fetch('/sched/api/v1/auth/sign-in',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({loginAccount:loginUser.value.trim(),password:loginPassword.value})});}
+    catch{throw new Error('無法連線到班表系統');}
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(result.error?.message||'登入失敗，請確認員工代碼和密碼');
+    await checkAccess().catch(showAccessError);
+  }catch(error){accessMessage.textContent=error.message;accessMessage.classList.add('error');}
+  finally{loginPassword.value='';loginButton.disabled=false;}
+});
 checkAccess().catch(err=>showAccessError(err));
 
 async function checkAccess(){
   const response=await fetch('./api/access',{credentials:'same-origin',cache:'no-store'});
   let result={};try{result=await response.json();}catch{}
-  if(response.ok){accessGate.hidden=true;appShell.hidden=false;await loadSettings();return;}
+  if(response.ok){await loadSettings();loginForm.hidden=true;accessGate.hidden=true;appShell.hidden=false;return;}
   const error=new Error(typeof result.error==='string'?result.error:'無法確認 SOYAL 使用權限');error.status=response.status;throw error;
 }
 function showAccessError(error){
-  accessMessage.textContent=error.status===401?'請先登入班表帳號，再由首頁進入 SOYAL。':error.status===403?'此帳號尚未開放使用 SOYAL，請聯絡管理員。':error.status>=500?'SOYAL 權限服務暫時無法使用，請稍後再試。':error.message;
-  accessMessage.classList.add('error');
+  appShell.hidden=true;accessGate.hidden=false;loginForm.hidden=error.status!==401&&error.status!==403;
+  accessMessage.textContent=error.status===401?'':error.status===403?'此帳號尚未開放使用 SOYAL，請聯絡管理員。':error.status>=500?'SOYAL 權限服務暫時無法使用，請稍後再試。':error.message;
+  accessMessage.classList.toggle('error',error.status!==401);
 }
 
 async function settingsRequest(type,method='GET',payload={}){
   const url=method==='GET'?`${SETTINGS_API}?type=${encodeURIComponent(type)}`:SETTINGS_API;
   const options={method,headers:{'Content-Type':'application/json'}};if(method!=='GET')options.body=JSON.stringify({type,...payload});
   const response=await fetch(url,options);let result={};try{result=await response.json();}catch{}
-  if(!response.ok){const message=typeof result.error==='string'?result.error:(result.error?.message||`設定 API 錯誤 (${response.status})`);throw new Error(message);}return result;
+  if(!response.ok){const message=typeof result.error==='string'?result.error:(result.error?.message||`設定 API 錯誤 (${response.status})`);throw Object.assign(new Error(message),{status:response.status});}return result;
 }
 
 async function loadSettings(){

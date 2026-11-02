@@ -54,6 +54,8 @@ postgresql://soyal_app:<password>@127.0.0.1:5432/soyal
 
 SOYAL 不另外建立第二組使用者密碼：一般使用者沿用 INDAR 班表的 `indar_session` 登入狀態，但只有管理頁「權限設定 → SOYAL」列出的在職員工可以進入。首頁對所有訪客顯示 SOYAL 按鈕，進入時由 `/api/access` 檢查權限；直接輸入網址也不能繞過權限。具 `permission_settings` 的班表管理員可在 `/admin.html#permissions` 維護名單。
 
+尚未登入時，SOYAL 頁面會顯示班表員工帳號登入表單。登入成功後再次檢查 SOYAL 權限；不在名單內的帳號無法進入，也可改用其他帳號登入。
+
 若要把現有 Supabase 設定資料帶入新 database，先完成建庫、schema 與 `/etc/indar-soyal/database.env`，再執行：
 
 ```bash
