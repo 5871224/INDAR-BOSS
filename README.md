@@ -56,6 +56,8 @@ SOYAL 不另外建立第二組使用者密碼：一般使用者沿用 INDAR 班�
 
 尚未登入時，SOYAL 頁面會顯示班表員工帳號登入表單。登入成功後再次檢查 SOYAL 權限；不在名單內的帳號無法進入，也可改用其他帳號登入。
 
+登入表單引用 INDAR 入口維護的 `/shared/login.css`，與管理頁、採購共用 `indar-login` 樣式；請先發布 INDAR 的共用樣式，再發布本頁。
+
 若要把現有 Supabase 設定資料帶入新 database，先完成建庫、schema 與 `/etc/indar-soyal/database.env`，再執行：
 
 ```bash
