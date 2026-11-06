@@ -1,8 +1,18 @@
 # INDAR-BOSS — SOYAL MSG Viewer
 
-純前端 SOYAL 701Server / 701Client `.msg` 解析器。檔案只在瀏覽器本機讀取，不上傳伺服器。
+BOSS 包含 SOYAL 701Server / 701Client `.msg` 解析及 IP 檢查頁面。匯入的檔案只在瀏覽器本機讀取，不上傳伺服器。
 
 本專案是 INDAR 入口中的 BOSS 應用，正式網址為 `https://192.168.1.29/soyal/`。門號與使用者設定由同一台 Ubuntu 上的本機 API 讀寫獨立 PostgreSQL database `soyal`；不再使用 Supabase。
+
+## 頁面結構
+
+`index.html` 是 BOSS 入口及 SOYAL 頁面，SOYAL 的程式與樣式放在 `pages/soyal/`；其他功能放在各自的 `pages/` 子目錄，從入口的分頁進入。新增靜態檔案時需同步更新 `scripts/install-soyal.sh` 的安裝清單。原有 `/soyal/` 入口與 `/soyal/api/` 保持不變。
+
+## IP檢查
+
+`pages/ip/` 提供名稱、MAC、IP 與 `/32 DROP` 規則檢查，也可匯入包含 `eventTime`、`dstIp`、`srcIp` 欄位的事件 CSV，更新阻擋 IP，排除指定 IP，依合併數量產生 `/24` 規則，排序及複製去重結果。既有清單可由含 `IP`、`更新時間` 欄位的 UTF-8 CSV 匯入，選用 `排除IP` 欄位一併匯入排除名單，也可逐行貼上。合併後顯示同網段最新時間，但保留各 IP 原始時間；調高門檻後可恢復各筆時間。
+
+阻擋清單與設定儲存在目前瀏覽器的本機儲存空間，不會跨設備或瀏覽器同步。使用下載備份及還原備份轉移資料，清除瀏覽器資料前應先備份。原 Excel 檔案及實際 IP 資料不放入儲存庫。
 
 ## 第一版功能
 - 拖放/選取一個或多個 `.msg`

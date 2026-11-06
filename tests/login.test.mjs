@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
-const script = readFileSync(new URL('../app.js', import.meta.url), 'utf8').replace(/^import .*;\s*$/gm, '')
+const script = readFileSync(new URL('../pages/soyal/app.js', import.meta.url), 'utf8').replace(/^import .*;\s*$/gm, '')
 const settle = () => new Promise(resolve => setImmediate(resolve))
 
 async function fixture({ access = [401] } = {}) {

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {parseBuffer, parseRecord, RECORD_SIZE} from '../parser.js';
+import {parseBuffer, parseRecord, RECORD_SIZE} from '../pages/soyal/parser.js';
 
 const record = new Uint8Array(RECORD_SIZE);
 record[0] = 0x21;

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>INDAR-BOSS｜IP檢查</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="/shared/auth-entry.js"></script>
+</head>
+<body>
+  <section id="accessGate" class="gate" aria-labelledby="accessTitle">
+    <h1 id="accessTitle">BOSS</h1><p id="accessMessage" role="status">正在確認 BOSS 使用權限…</p><a href="/">返回首頁</a>
+  </section>
+  <main class="wrap" id="appShell" hidden>
+    <header><h1>INDAR-BOSS</h1><a class="home-link" href="/" aria-label="返回首頁" title="返回首頁">⌂</a></header>
+    <nav class="page-tabs" aria-label="功能頁面"><a href="../../">SOYAL</a><a href="./" aria-current="page">IP檢查</a></nav>
+    <section class="card">
+      <h2>名稱、MAC、IP 檢查</h2>
+      <p>每行貼上一筆「名稱 MAC 192.168.1.IP -」；第一行以 <code>-A</code> 開頭時，改為檢查阻擋規則。</p>
+      <label for="checkInput">待檢查資料</label>
+      <textarea id="checkInput" rows="6" placeholder="例如：pc-01 00:11:22:33:44:55 192.168.1.2 -"></textarea>
+      <div class="actions"><button id="check" class="primary">檢查</button><button id="clearCheck">清空</button><button id="copyChecked">複製轉換結果</button><span id="checkStatus" role="status"></span></div>
+      <div class="table-wrap"><table><thead><tr><th>原始資料</th><th>轉換結果</th><th>檢查結果</th></tr></thead><tbody id="checkRows"></tbody></table></div>
+    </section>
+    <section class="card">
+      <h2>檢查阻擋 IP</h2>
+      <p>匯入事件 CSV（需有 eventTime、dstIp、srcIp 欄位）。相同 IP 取最新時間，排除清單中的 IP 不會加入阻擋清單。</p>
+      <div class="actions"><label class="file-button">匯入事件 CSV<input id="events" type="file" accept=".csv,text/csv" hidden></label><label class="file-button">匯入既有清單 CSV<input id="list" type="file" accept=".csv,text/csv" hidden></label><button id="backup">下載備份</button><label class="file-button">還原備份<input id="restore" type="file" accept=".json,application/json" hidden></label></div>
+      <p class="note">既有清單 CSV 欄位：IP、更新時間（可包含轉格式）；由 Excel 另存為 UTF-8 CSV。資料只儲存在目前瀏覽器，換設備或清除瀏覽器資料前請下載備份。</p>
+      <div class="controls"><label>合併數量（2–254）<input id="threshold" type="number" min="2" max="254" step="1"></label><button id="setThreshold">套用</button><label>排序<select id="sort"><option value="ip">IP</option><option value="time">更新時間（新到舊）</option></select></label><button id="copyRules">複製去重後的阻擋規則</button><span id="blockStatus" role="status"></span></div>
+      <div class="exclude"><label for="exclusions">排除 IP（每行一個）</label><textarea id="exclusions" rows="3"></textarea><button id="saveExclusions">儲存排除清單</button><span id="excludeCounts"></span></div>
+      <div class="table-wrap"><table><thead><tr><th>IP</th><th>轉格式</th><th>更新時間</th><th>操作</th></tr></thead><tbody id="blockRows"></tbody></table></div>
+    </section>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

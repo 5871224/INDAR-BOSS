@@ -3,3 +3,5 @@
 .home-link:hover{background:#f3f7f3;border-color:#9db5a7}
 .home-link:focus-visible{outline:3px solid #2b7864;outline-offset:3px}
 @media(max-width:700px){header{flex-wrap:wrap}.header-actions{flex-direction:row;flex-wrap:wrap;justify-content:flex-end}}
+
+.page-tabs{display:flex;gap:4px;border-bottom:1px solid #dce3ec;margin-bottom:18px;overflow-x:auto}.page-tabs a{padding:10px 16px;color:#526079;text-decoration:none;white-space:nowrap;border-bottom:3px solid transparent}.page-tabs a[aria-current="page"]{color:#1f5fbf;border-bottom-color:#1f5fbf;font-weight:700}.page-tabs a:focus-visible{outline:3px solid #2b7864;outline-offset:-3px}

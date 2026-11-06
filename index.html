@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>INDAR-BOSS｜SOYAL MSG Viewer</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="pages/soyal/styles.css" />
   <script src="/shared/auth-entry.js"></script>
 </head>
 <body>
@@ -27,6 +27,11 @@
         </a>
       </div>
     </header>
+
+    <nav class="page-tabs" aria-label="功能頁面">
+      <a href="./" aria-current="page">SOYAL</a>
+      <a href="pages/ip/">IP檢查</a>
+    </nav>
 
     <section class="card uploader" id="dropZone">
       <input id="fileInput" type="file" accept=".msg,application/octet-stream" multiple hidden />
@@ -149,7 +154,7 @@
     </div>
   </dialog>
 
-  <script type="module" src="app.js"></script>
-  <script type="module" src="settings-excel-ui.js"></script>
+  <script type="module" src="pages/soyal/app.js"></script>
+  <script type="module" src="pages/soyal/settings-excel-ui.js"></script>
 </body>
 </html>

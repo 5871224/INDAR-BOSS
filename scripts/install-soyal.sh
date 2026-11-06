@@ -10,7 +10,7 @@ repo=/home/indar/deploy/INDAR-SOYAL
 target=/srv/web/soyal
 env_file=/etc/indar-soyal/database.env
 unit=/etc/systemd/system/indar-soyal.service
-files=(index.html app.js parser.js excel.js event-excel.js settings-excel-ui.js styles.css)
+files=(index.html pages/soyal/app.js pages/soyal/parser.js pages/soyal/excel.js pages/soyal/event-excel.js pages/soyal/settings-excel-ui.js pages/soyal/styles.css pages/ip/index.html pages/ip/app.js pages/ip/logic.js pages/ip/styles.css)
 
 test -s "$repo/package-lock.json"
 test -s "$repo/server.mjs"
@@ -23,6 +23,7 @@ runuser -u indar -- /usr/local/bin/npm ci --omit=dev --ignore-scripts --prefix "
 install -d -o indar -g indar -m 0755 "$target"
 for file in "${files[@]}"; do
   test -s "$repo/$file"
+  install -d -o indar -g indar -m 0755 "$(dirname "$target/$file")"
   install -o indar -g indar -m 0644 "$repo/$file" "$target/$file"
 done
 
