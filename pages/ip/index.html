@@ -14,14 +14,6 @@
   </section>
   <main class="wrap" id="appShell" hidden>
     <section class="card">
-      <h2>名稱、MAC、IP 檢查</h2>
-      <p>每行貼上一筆「名稱 MAC 192.168.1.IP -」；第一行以 <code>-A</code> 開頭時，改為檢查阻擋規則。</p>
-      <label for="checkInput">待檢查資料</label>
-      <textarea id="checkInput" rows="6" placeholder="例如：pc-01 00:11:22:33:44:55 192.168.1.2 -"></textarea>
-      <div class="actions"><button id="check" class="primary">檢查</button><button id="clearCheck">清空</button><button id="copyChecked">複製轉換結果</button><span id="checkStatus" role="status"></span></div>
-      <div class="table-wrap"><table><thead><tr><th>原始資料</th><th>轉換結果</th><th>檢查結果</th></tr></thead><tbody id="checkRows"></tbody></table></div>
-    </section>
-    <section class="card">
       <h2>檢查阻擋 IP</h2>
       <p>匯入事件 CSV（需有 eventTime、dstIp、srcIp 欄位）。相同 IP 取最新時間，排除清單中的 IP 不會加入阻擋清單。</p>
       <div class="actions"><label class="file-button">匯入事件 CSV<input id="events" type="file" accept=".csv,text/csv" hidden></label><label class="file-button">匯入既有清單 CSV<input id="list" type="file" accept=".csv,text/csv" hidden></label></div>

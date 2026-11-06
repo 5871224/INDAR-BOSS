@@ -1,17 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkLines, ipAddress, mergeEvents, parseCsv, rulesFor, timestamp } from '../pages/ip/logic.js';
+import { ipAddress, mergeEvents, parseCsv, rulesFor, timestamp } from '../pages/ip/logic.js';
 
-test('檢查兩種格式與重複資料', () => {
+test('檢查 IP 格式', () => {
   assert.equal(ipAddress('192.168.001.002'), '192.168.1.2');
   assert.equal(ipAddress('192.168.1.256'), null);
-  const input = 'PC-1 aa:bb:cc:dd:ee:ff 192.168.1.02 -\npc-1 aa:bb:cc:dd:ee:ff 192.168.1.2 -';
-  const rows = checkLines(input).rows;
-  assert.equal(rows[0].output, 'pc-1 aa:bb:cc:dd:ee:ff 192.168.1.2 -');
-  for (const row of rows) assert.deepEqual(row.errors, ['名稱重複', 'MAC 重複', 'IP 重複']);
-  const rules = checkLines('-A 1.2.3.010/32 DROP\n-A 1.2.3.10/32 DROP\n-A 1.2.3.999/32 DROP').rows;
-  assert.equal(rules.filter(r => r.errors.includes('IP 重複')).length, 2);
-  assert.equal(rules.filter(r => r.errors.includes('格式或 IP 有誤')).length, 1);
 });
 
 test('CSV 與事件合併、排除、網段合併及時間', () => {

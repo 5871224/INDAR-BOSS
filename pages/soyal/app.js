@@ -42,10 +42,8 @@ ipPage.addEventListener('load',()=>{
   update();
 });
 $('#logoutBtn').addEventListener('click',async()=>{
-  const doc=ipPage.contentDocument;
-  const input=doc?.getElementById('checkInput')?.value.trim();
   const changed=Boolean(ipPage.contentWindow?.hasUnsavedExclusions?.());
-  if((filesLoaded||input||changed)&&!confirm('目前有尚未保存的資料，登出後將清除畫面內容。確定登出？'))return;
+  if((filesLoaded||changed)&&!confirm('目前有尚未保存的資料，登出後將清除畫面內容。確定登出？'))return;
   const button=$('#logoutBtn');button.disabled=true;$('#headerMessage').textContent='';
   try{
     const response=await fetch('/sched/api/v1/auth/sign-out',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});

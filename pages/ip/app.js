@@ -1,7 +1,7 @@
-import { checkLines, ipAddress, ipOrder, mergeEvents, parseCsv, rulesFor, timestamp, exclusionPasteValues } from './logic.js';
+import { ipAddress, ipOrder, mergeEvents, parseCsv, rulesFor, timestamp, exclusionPasteValues } from './logic.js';
 
 const $ = id => document.getElementById(id);
-let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, checked = [], saving = false, exclusionDraft = [''];
+let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, saving = false, exclusionDraft = [''];
 
 function validateState(input) {
   if (!input || !Array.isArray(input.entries) || !Array.isArray(input.exclusions) || !Number.isInteger(input.threshold) || input.threshold < 2 || input.threshold > 254) throw new Error('IP 清單格式有誤');
@@ -53,22 +53,11 @@ function render() {
     const td = document.createElement('td'), button = document.createElement('button'); button.textContent = '刪除'; button.dataset.ip = row.ip; button.setAttribute('aria-label', `刪除 ${row.ip}`); td.append(button); tr.append(td); return tr;
   }));
 }
-function showChecks() {
-  $('checkRows').replaceChildren(...checked.map(row => {
-    const tr = document.createElement('tr');
-    for (const [i, value] of [row.original, row.output, row.errors.join('、') || '通過'].entries()) { const td = document.createElement('td'); td.textContent = value; if (i === 2 && row.errors.length) td.className = 'error'; tr.append(td); }
-    return tr;
-  }));
-}
 async function copy(text, el) {
   try { if (!text) throw new Error('沒有可複製的資料'); await navigator.clipboard.writeText(text); el.textContent = '已複製'; }
   catch (error) { el.textContent = error.message || '複製失敗，請確認瀏覽器權限'; }
 }
 
-$('check').onclick = () => { const result = checkLines($('checkInput').value); checked = result.rows; showChecks(); $('checkStatus').textContent = `${result.rules ? '阻擋規則' : '名稱、MAC、IP'}：${checked.length} 筆，${checked.filter(r => r.errors.length).length} 筆有誤`; };
-$('checkInput').oninput = () => { if (checked.length) { checked = []; showChecks(); $('checkStatus').textContent = '資料已變更，請重新檢查'; } };
-$('clearCheck').onclick = () => { $('checkInput').value = ''; checked = []; showChecks(); $('checkStatus').textContent = ''; };
-$('copyChecked').onclick = () => copy(checked.map(r => r.output).filter(Boolean).join('\r\n'), $('checkStatus'));
 $('setThreshold').onclick = () => action(async () => { const threshold = Number($('threshold').value); await commit({ ...state, threshold }); status('已更新合併數量'); });
 function meaningfulExclusions() { return exclusionDraft.map(value => value.trim()).filter(Boolean); }
 function focusExclusion(index) { $('exclusionRows').querySelector(`[data-index="${index}"]`)?.focus(); }

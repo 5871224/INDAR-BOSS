@@ -17,40 +17,6 @@ export function timestamp(value) {
   return Date.UTC(year, month - 1, day, hour, minute, second, ms) - offset * 60000;
 }
 
-export function checkLines(text) {
-  const lines = text.split(/\r?\n/); while (lines.length && !lines.at(-1).trim()) lines.pop();
-  const rules = /^-A/i.test(lines[0]?.trim() || '');
-  const seen = [new Map(), new Map(), new Map()];
-  const rows = lines.map((original, index) => ({ original, index, output: '', errors: [] }));
-  function duplicate(map, key, row, label) {
-    const previous = map.get(key);
-    if (previous) { if (!previous.errors.includes(label)) previous.errors.push(label); row.errors.push(label); }
-    map.set(key, row);
-  }
-  for (const row of rows) {
-    if (rules) {
-      const match = row.original.trim().match(/^-A\s+(\d{1,3}(?:\.\d{1,3}){3})\/32\s+DROP$/i);
-      const ip = match && ipAddress(match[1]);
-      if (!ip) row.errors.push('格式或 IP 有誤');
-      else { row.output = `-A ${ip}/32 DROP`; duplicate(seen[0], ip, row, 'IP 重複'); }
-    } else {
-      const value = row.original.trim().toLowerCase();
-      if ((value.match(/ /g) || []).length !== 3) { row.errors.push('空格數有誤'); continue; }
-      const [name, mac, rawIp] = value.split(' ');
-      if (!/^[0-9a-z-]+$/.test(name)) row.errors.push('名稱有誤');
-      duplicate(seen[0], name, row, '名稱重複');
-      duplicate(seen[1], mac, row, 'MAC 重複');
-      if (!/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) row.errors.push('MAC 有誤');
-      const ip = ipAddress(rawIp);
-      if (!ip || !ip.startsWith('192.168.1.')) row.errors.push('IP 有誤');
-      else if (ip.endsWith('.0')) row.errors.push('IP 為 0');
-      else { duplicate(seen[2], ip, row, 'IP 重複'); row.output = `${name} ${mac} ${ip} -`; }
-    }
-  }
-  if (rules) rows.sort((a, b) => (a.output ? ipOrder(a.output.split(' ')[1].split('/')[0]) : a.original).localeCompare(b.output ? ipOrder(b.output.split(' ')[1].split('/')[0]) : b.original));
-  return { rules, rows };
-}
-
 // CSV quotes, embedded commas and embedded newlines are supported.
 export function parseCsv(text) {
   const rows = []; let row = [], field = '', quoted = false, closed = false;
