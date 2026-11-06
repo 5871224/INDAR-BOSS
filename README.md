@@ -100,3 +100,7 @@ sudo bash /home/indar/deploy/INDAR/scripts/install-intranet.sh
 ```
 
 執行 INDAR 安裝程式前，先把 `deploy/indar-soyal.nginx.conf` 的 location 放入 INDAR 的 default HTTPS server；它設定 `/boss` 路由及舊 `/soyal` 的導向，不會改動其他應用路由。
+
+### 自動部署
+
+推送至 `main` 後，GitHub Actions 先執行檢查與測試，通過後由此專案專用的 `indar-boss` self-hosted runner 部署至內網主機。也可從 Actions 手動執行流程；只有 `main` 可以部署。部署腳本會檢查版本、服務與網站，失敗時還原上一版本。Runner 由主機上的使用者服務 `github-runner-indar-boss.service` 持續執行。
