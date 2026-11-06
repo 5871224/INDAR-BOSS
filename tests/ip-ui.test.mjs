@@ -99,12 +99,12 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   const revisionBefore = shared.revision, writesBefore = putRequests;
   await changeMany('events', [
     ['來自外部.csv', 'eventTime,dstIp,srcIp\n2025-01-03 10:00:00,1.2.3.5,8.8.8.8'],
-    ['來自內部.csv', 'eventTime,dstIp,srcIp\n2025-01-04 15:00:00,1.2.3.5,9.9.9.9']
+    ['來自內部.csv', 'eventTime,dstIp,srcIp\n2025-01-04 15:00:00,1.2.3.5,6.6.6.6']
   ]);
   assert.equal(shared.revision, revisionBefore + 1);
   assert.equal(putRequests, writesBefore + 1);
   assert.equal(shared.entries.find(row => row.ip === '1.2.3.5').time, '2025-01-04 15:00:00');
-  assert.ok(shared.entries.some(row => row.ip === '9.9.9.9'));
+  assert.ok(shared.entries.some(row => row.ip === '6.6.6.6'));
   assert.match($('blockStatus').textContent, /已匯入 2 個 CSV，3 個不同 IP/);
   assert.equal($('events').value, '');
   const beforeInvalid = JSON.stringify(shared), writesBeforeInvalid = putRequests;
@@ -125,9 +125,9 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.equal($('blockRows').children.length, 1);
   assert.equal($('blockRows').children[0].children[0].textContent, '004.004.004.004');
   $('columnFilterClear').onclick();
-  assert.equal($('blockRows').children.length, 4);
+  assert.equal($('blockRows').children.length, 3);
   $('columnSortDesc').onclick();
-  assert.equal($('blockRows').children[0].children[0].textContent, '009.009.009.009');
+  assert.equal($('blockRows').children[0].children[0].textContent, '006.006.006.006');
   assert.equal($('columnMenu').hidden, true);
   await $('copyRules').onclick();
   assert.match(clipboardText, /DROP/);
