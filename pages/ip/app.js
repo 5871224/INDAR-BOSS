@@ -1,4 +1,4 @@
-import { ipAddress, ipOrder, mergeEvents, parseCsv, rulesFor, timestamp, exclusionPasteValues } from './logic.js';
+import { ipAddress, ipOrder, mergeEvents, rulesFor, timestamp, exclusionPasteValues } from './logic.js';
 
 const $ = id => document.getElementById(id);
 let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, saving = false, exclusionDraft = [''];
@@ -146,21 +146,6 @@ $('sort').onchange = render;
 $('blockRows').onclick = event => action(async () => { const ip = event.target.dataset.ip; if (ip && confirm(`確定刪除 ${ip}？`)) { await commit({ ...state, entries: state.entries.filter(e => e.ip !== ip) }); status('已刪除'); } });
 $('copyRules').onclick = () => copy([...new Set(rulesFor(state.entries, state.threshold).sort((a,b) => ipOrder(a.ip).localeCompare(ipOrder(b.ip))).map(e => e.rule))].join('\r\n'), $('blockStatus'));
 $('events').onchange = event => fileAction(event.target, async file => { const started = revision; const text = await file.text(); if (started !== revision) throw new Error('清單已變更，請重新匯入'); const result = mergeEvents(state.entries, state.exclusions, text); await commit({ ...state, entries: result.entries }, started); counts = result.counts; render(); status(`已處理 ${result.count} 個不同 IP；略過 ${result.skipped} 個無效時間或 IP`); });
-$('list').onchange = event => fileAction(event.target, async file => {
-  const started = revision; const text = await file.text(); if (started !== revision) throw new Error('清單已變更，請重新匯入');
-  const rows = parseCsv(text); const headers = rows.shift()?.map(s => s.trim()); const ipCol = headers?.indexOf('IP') ?? -1, timeCol = headers?.indexOf('更新時間') ?? -1;
-  if (ipCol < 0 || timeCol < 0) throw new Error('既有清單 CSV 需要 IP、更新時間欄位');
-  const next = new Map(state.entries.map(e => [e.ip, e])); const exclusions = new Set(state.exclusions); const exclusionCol = headers.indexOf('排除IP');
-  for (const [i, row] of rows.entries()) {
-    const exclusion = exclusionCol >= 0 ? (row[exclusionCol] || '').trim() : '';
-    if (exclusion) { const normalized = ipAddress(exclusion); if (!normalized) throw new Error(`第 ${i + 2} 行排除 IP 有誤，未匯入任何資料`); exclusions.add(normalized); }
-    if (!(row[ipCol] || '').trim() && !(row[timeCol] || '').trim()) continue;
-    const ip = ipAddress(row[ipCol] || ''), time = (row[timeCol] || '').trim();
-    if (!ip || (time && !Number.isFinite(timestamp(time)))) throw new Error(`第 ${i + 2} 行 IP 或時間有誤，未匯入任何資料`);
-    const prev = next.get(ip); if (!prev || (time && (!prev.time || timestamp(time) > timestamp(prev.time)))) next.set(ip, { ip, time });
-  }
-  await commit({ ...state, entries: [...next.values()], exclusions: [...exclusions] }, started); status(`已匯入 ${rows.length} 行既有清單`);
-});
 
 async function start() {
   try {
