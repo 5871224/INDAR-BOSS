@@ -29,11 +29,12 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
     configurable: true,
     value: { clipboard: { writeText: async text => { clipboardText = text; } } }
   });
-  let shared = { entries: [{ ip: '4.4.4.4', time: '2025/1/1' }], exclusions: ['8.8.8.8'], threshold: 6, revision: 0 }, fail = false;
+  let shared = { entries: [{ ip: '4.4.4.4', time: '2025/1/1' }], exclusions: ['8.8.8.8'], threshold: 6, revision: 0 }, fail = false, putRequests = 0;
   globalThis.fetch = async (url, options = {}) => {
     if (url.endsWith('/api/access')) return { ok: true };
     assert.equal(url, '../../api/ip-state');
     if (options.method === 'PUT') {
+      putRequests++;
       if (fail) return { ok: false, status: 409, json: async () => ({ error: '清單已被其他使用者更新' }) };
       const body = JSON.parse(options.body); assert.equal(body.revision, shared.revision);
       shared = { ...body, revision: body.revision + 1 };
@@ -43,7 +44,12 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   const $ = id => document.getElementById(id);
   const input = index => $('exclusionRows').querySelector(`[data-index="${index}"]`);
   const paste = (index, text) => { let prevented = false; $('exclusionRows').listeners.paste({ target: input(index), clipboardData: { getData: () => text }, preventDefault() { prevented = true; } }); return prevented; };
-  const change = (id, text) => { const target = $(id); target.files = [{ text: async () => text }]; return target.onchange({ target }); };
+  const changeMany = (id, inputs) => {
+    const target = $(id);
+    target.files = inputs.map(([name, text]) => ({ name, text: async () => text }));
+    return target.onchange({ target });
+  };
+  const change = (id, text) => changeMany(id, [['events.csv', text]]);
   await import('../pages/ip/app.js?shared'); await new Promise(resolve => setImmediate(resolve));
   assert.equal($('threshold').value, 8);
   assert.equal($('exclusionSummary').textContent, '1');
@@ -90,6 +96,25 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   const before = JSON.stringify(shared);
   await change('events', 'IP,更新時間\nnot-ip,2025/1/2');
   assert.equal(JSON.stringify(shared), before);
+  const revisionBefore = shared.revision, writesBefore = putRequests;
+  await changeMany('events', [
+    ['來自外部.csv', 'eventTime,dstIp,srcIp\n2025-01-03 10:00:00,1.2.3.5,8.8.8.8'],
+    ['來自內部.csv', 'eventTime,dstIp,srcIp\n2025-01-04 15:00:00,1.2.3.5,9.9.9.9']
+  ]);
+  assert.equal(shared.revision, revisionBefore + 1);
+  assert.equal(putRequests, writesBefore + 1);
+  assert.equal(shared.entries.find(row => row.ip === '1.2.3.5').time, '2025-01-04 15:00:00');
+  assert.ok(shared.entries.some(row => row.ip === '9.9.9.9'));
+  assert.match($('blockStatus').textContent, /已匯入 2 個 CSV，3 個不同 IP/);
+  assert.equal($('events').value, '');
+  const beforeInvalid = JSON.stringify(shared), writesBeforeInvalid = putRequests;
+  await changeMany('events', [
+    ['正常.csv', 'eventTime,dstIp,srcIp\n2025-01-05 09:00:00,2.3.4.5,2.3.4.6'],
+    ['欄位錯誤.csv', 'a,b,c\nx,y,z']
+  ]);
+  assert.equal(JSON.stringify(shared), beforeInvalid);
+  assert.equal(putRequests, writesBeforeInvalid);
+  assert.match($('blockStatus').textContent, /欄位錯誤.csv/);
   $('columnTool-ip').onclick();
   assert.equal($('columnMenu').hidden, false);
   $('columnSearch').value = '4.*4';
@@ -100,9 +125,9 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.equal($('blockRows').children.length, 1);
   assert.equal($('blockRows').children[0].children[0].textContent, '004.004.004.004');
   $('columnFilterClear').onclick();
-  assert.equal($('blockRows').children.length, 2);
+  assert.equal($('blockRows').children.length, 4);
   $('columnSortDesc').onclick();
-  assert.equal($('blockRows').children[0].children[0].textContent, '004.004.004.004');
+  assert.equal($('blockRows').children[0].children[0].textContent, '009.009.009.009');
   assert.equal($('columnMenu').hidden, true);
   await $('copyRules').onclick();
   assert.match(clipboardText, /DROP/);

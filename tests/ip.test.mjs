@@ -40,3 +40,24 @@ test('萬用字元排除 IP 與文字搜尋', () => {
   assert.equal(wildcardSearch('2026/11/6','2026*11*6'), true);
   assert.equal(wildcardSearch('2026/11/6','2025*'), false);
 });
+
+test('多個 CSV 一次合併去重、取最新事件，且任何檔案錯誤都拒絕匯入', () => {
+  const files = [
+    { name: '第一份.csv', text: 'eventTime,dstIp,srcIp\n2026-11-05 09:00:00,1.2.3.4,8.8.8.8\n2026-11-05 10:00:00,1.2.3.5,1.2.3.4' },
+    { name: '第二份.csv', text: 'eventTime,dstIp,srcIp\n2026-11-06 11:00:00,1.2.3.4,1.2.3.6\ninvalid,1.2.3.9,1.2.3.10' }
+  ];
+  const original = [{ ip: '1.2.3.4', time: '2026-11-04 07:00:00' }];
+  const result = mergeEvents(original, ['8.8.8.*'], files);
+  assert.equal(result.count, 4); // Across both files, not summed per file.
+  assert.equal(result.skipped, 1);
+  assert.equal(result.entries.length, 3);
+  assert.equal(result.entries.find(row => row.ip === '1.2.3.4').time, '2026-11-06 11:00:00');
+  assert.equal(result.counts['8.8.8.*'], 1);
+  assert.deepEqual(original, [{ ip: '1.2.3.4', time: '2026-11-04 07:00:00' }]);
+  assert.throws(
+    () => mergeEvents(original, [], [...files, { name: '錯誤.csv', text: 'wrong,columns\nx,y' }]),
+    /錯誤.csv：CSV 需要/
+  );
+  const reversed = mergeEvents([], [], [...files].reverse());
+  assert.equal(reversed.entries.find(row => row.ip === '1.2.3.4').time, '2026-11-06 11:00:00');
+});

@@ -74,15 +74,28 @@ export function parseCsv(text) {
 }
 
 export function mergeEvents(entries, exclusions, csv) {
-  const rows = parseCsv(csv); const headers = rows.shift()?.map(s => s.trim());
-  const cols = ['eventTime', 'dstIp', 'srcIp'].map(h => headers?.indexOf(h) ?? -1);
-  if (cols.some(i => i < 0)) throw new Error('CSV 需要 eventTime、dstIp、srcIp 欄位');
+  // A single CSV string or several { name, text } files share one import pass.
+  // Validate every file before returning any changes for the database commit.
+  const sources = Array.isArray(csv) ? csv : [csv];
+  if (!sources.length) throw new Error('未選擇 CSV 檔案');
   const latest = new Map(); let skipped = 0;
-  for (const row of rows) {
-    const date = timestamp(row[cols[0]]); if (!Number.isFinite(date)) { skipped++; continue; }
-    for (const col of cols.slice(1)) {
-      const ip = ipAddress(row[col] || ''); if (!ip) { if (row[col]?.trim()) skipped++; continue; }
-      if (!latest.has(ip) || date > latest.get(ip).date) latest.set(ip, { date, time: row[cols[0]].trim() });
+  for (let index = 0; index < sources.length; index++) {
+    const source = sources[index];
+    const text = typeof source === 'string' ? source : source?.text;
+    const name = typeof source === 'string' ? '' : String(source?.name || `第 ${index + 1} 個檔案`);
+    if (typeof text !== 'string') throw new Error(`${name || 'CSV'} 無法讀取`);
+    let rows;
+    try { rows = parseCsv(text); }
+    catch (error) { throw new Error(`${name ? name + '：' : ''}${error.message}`); }
+    const headers = rows.shift()?.map(s => s.trim());
+    const cols = ['eventTime', 'dstIp', 'srcIp'].map(h => headers?.indexOf(h) ?? -1);
+    if (cols.some(i => i < 0)) throw new Error(`${name ? name + '：' : ''}CSV 需要 eventTime、dstIp、srcIp 欄位`);
+    for (const row of rows) {
+      const date = timestamp(row[cols[0]]); if (!Number.isFinite(date)) { skipped++; continue; }
+      for (const col of cols.slice(1)) {
+        const ip = ipAddress(row[col] || ''); if (!ip) { if (row[col]?.trim()) skipped++; continue; }
+        if (!latest.has(ip) || date > latest.get(ip).date) latest.set(ip, { date, time: row[cols[0]].trim() });
+      }
     }
   }
   const next = new Map(entries.map(e => [e.ip, { ...e }])); const counts = {};

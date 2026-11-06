@@ -99,9 +99,12 @@ async function commit(next, expectedRevision = revision) {
 function status(message, error = false) { $('blockStatus').textContent = message; $('blockStatus').classList.toggle('status-error', error); }
 async function action(fn) { try { await fn(); } catch (error) { status(error.message || '操作失敗；資料未變更', true); } }
 async function fileAction(input, fn) {
-  try { const file = input.files[0]; if (file) await fn(file); }
+  const files = Array.from(input.files || []);
+  if (!files.length || input.disabled) return;
+  input.disabled = true;
+  try { await fn(files); }
   catch (error) { status(error.message || '操作失敗；資料未變更', true); }
-  finally { input.value = ''; }
+  finally { input.value = ''; input.disabled = false; }
 }
 function render() {
   if (document.activeElement !== $('threshold')) $('threshold').value = currentThreshold();
@@ -316,7 +319,16 @@ $('blockRows').onclick = event => action(async () => {
   }
 });
 $('copyRules').onclick = () => copy([...new Set(rulesFor(state.entries, currentThreshold()).sort((a,b) => ipOrder(a.ip).localeCompare(ipOrder(b.ip))).map(e => e.rule))].join('\r\n'));
-$('events').onchange = event => fileAction(event.target, async file => { const started = revision; const text = await file.text(); if (started !== revision) throw new Error('清單已變更，請重新匯入'); const result = mergeEvents(state.entries, state.exclusions, text); await commit({ ...state, entries: result.entries }, started); counts = result.counts; render(); status(`已處理 ${result.count} 個不同 IP；略過 ${result.skipped} 個無效時間或 IP`); });
+$('events').onchange = event => fileAction(event.target, async files => {
+  const started = revision;
+  const sources = await Promise.all(files.map(async file => ({ name: file.name, text: await file.text() })));
+  if (started !== revision) throw new Error('清單已變更，請重新匯入');
+  const result = mergeEvents(state.entries, state.exclusions, sources);
+  await commit({ ...state, entries: result.entries }, started);
+  counts = result.counts;
+  render();
+  status(`已匯入 ${files.length} 個 CSV，${result.count} 個不同 IP；略過 ${result.skipped} 個無效時間或 IP`);
+});
 
 async function start() {
   try {
