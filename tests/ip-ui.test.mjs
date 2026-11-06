@@ -53,7 +53,7 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.equal($('exclusionDialog').open, false); assert.deepEqual(shared.exclusions, ['8.8.8.8', '7.7.7.7', '1.2.3.4', '9.9.9.9']);
   $('openExclusions').onclick(); input(4).value = 'bad-ip'; $('exclusionRows').listeners.input({ target: input(4) });
   await $('saveExclusions').onclick(); assert.match($('exclusionStatus').textContent, /第 5 列 IP 格式有誤/); assert.equal(input(4).attributes['aria-invalid'], 'true');
-  $('cancelExclusions').onclick();
+  $('closeExclusions').onclick(); assert.equal($('exclusionDialog').open, false); assert.deepEqual(shared.exclusions, ['8.8.8.8', '7.7.7.7', '1.2.3.4', '9.9.9.9']);
   await change('events', 'eventTime,dstIp,srcIp\n2025-01-02 10:00:00,7.7.7.7,1.2.3.5');
   assert.equal(shared.entries.some(e => e.ip === '7.7.7.7'), false);
   assert.equal(shared.entries.some(e => e.ip === '1.2.3.5'), true);

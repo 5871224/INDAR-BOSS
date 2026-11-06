@@ -137,7 +137,7 @@ $('exclusionRows').addEventListener('click', event => {
   renderExclusions(); focusExclusion(Math.min(index, exclusionDraft.length - 1));
 });
 $('addExclusion').onclick = () => { exclusionDraft.push(''); appendExclusionRow(exclusionDraft.length - 1); focusExclusion(exclusionDraft.length - 1); };
-$('cancelExclusions').onclick = () => $('exclusionDialog').close();
+$('closeExclusions').onclick = () => $('exclusionDialog').close();
 $('saveExclusions').onclick = async () => {
   try {
     const raw = meaningfulExclusions(); const exclusions = raw.map(ipAddress);
