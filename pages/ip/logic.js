@@ -4,6 +4,44 @@ export function ipAddress(value) {
   return parts.map(Number).join('.');
 }
 export const ipOrder = ip => ip.split('.').map(n => n.padStart(3, '0')).join('.');
+
+// '*' matches one complete IPv4 octet. Exact IPs retain their existing format.
+export function exclusionPattern(value) {
+  const parts = String(value ?? '').trim().split('.');
+  if (parts.length !== 4) return null;
+  const normalized = parts.map(part => {
+    if (part === '*') return '*';
+    if (!/^\d{1,3}$/.test(part) || Number(part) > 255) return null;
+    return String(Number(part));
+  });
+  if (normalized.some(part => part === null)) return null;
+  return normalized.join('.');
+}
+export function matchesExclusion(ip, pattern) {
+  const address = ipAddress(ip);
+  const normalized = exclusionPattern(pattern);
+  if (!address || !normalized) return false;
+  const source = address.split('.');
+  return normalized.split('.').every((part, index) => part === '*' || part === source[index]);
+}
+
+// Unanchored wildcard search: '*' stands for any number of characters.
+export function wildcardSearch(value, expression) {
+  const source = String(value ?? '').toLowerCase();
+  const parts = String(expression ?? '').toLowerCase().split('*');
+  let cursor = 0;
+  for (const part of parts) {
+    if (!part) continue;
+    const at = source.indexOf(part, cursor);
+    if (at < 0) return false;
+    cursor = at + part.length;
+  }
+  return true;
+}
+export function displayDate(value) {
+  const match = String(value ?? '').trim().match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  return match ? `${match[1]}/${match[2]}/${match[3]}` : String(value ?? '').trim();
+}
 export function timestamp(value) {
   const match = String(value).trim().match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-]\d{2}:?\d{2})?)?$/i);
   if (!match) return NaN;
@@ -48,8 +86,13 @@ export function mergeEvents(entries, exclusions, csv) {
     }
   }
   const next = new Map(entries.map(e => [e.ip, { ...e }])); const counts = {};
+  const patterns = exclusions.map(exclusionPattern).filter(Boolean);
   for (const [ip, event] of latest) {
-    if (exclusions.includes(ip)) { counts[ip] = 1; continue; }
+    const matched = patterns.filter(pattern => matchesExclusion(ip, pattern));
+    if (matched.length) {
+      for (const pattern of matched) counts[pattern] = (counts[pattern] || 0) + 1;
+      continue;
+    }
     const current = next.get(ip);
     if (!current || !Number.isFinite(timestamp(current.time)) || event.date > timestamp(current.time)) next.set(ip, { ip, time: event.time });
   }

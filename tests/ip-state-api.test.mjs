@@ -10,6 +10,9 @@ test('validates and normalizes shared IP data before acquiring a database connec
   assert.throws(() => normalizeIpState({ ...sample, exclusions: ['1.2.3.4', '001.2.3.4'] }), /重複/)
   assert.throws(() => normalizeIpState({ ...sample, entries: [{ ip: '999.2.3.4', time: '' }] }), /無效/)
   assert.throws(() => normalizeIpState({ ...sample, revision: -1 }), /格式/)
+  assert.deepEqual(normalizeIpState({ ...sample, exclusions: ['220.130.001.*', '8.8.8.8'] }).exclusions, ['220.130.1.*', '8.8.8.8'])
+  assert.throws(() => normalizeIpState({ ...sample, exclusions: ['220.130.1.*', '220.130.001.*'] }), /重複/)
+  assert.throws(() => normalizeIpState({ ...sample, exclusions: ['220.130.1.2*'] }), /無效/)
 })
 
 test('the shared IP API enforces authorization before database access', async t => {
@@ -39,7 +42,11 @@ test('real PostgreSQL stores both lists atomically and rejects stale updates', {
   const saved = await get(); assert.equal(saved.revision, 1); assert.equal(saved.entries[0].ip, '1.2.3.4'); assert.equal(saved.exclusions.length, 1)
   const invalid = await put({ ...saved, entries: [{ ip: '1.2.3.4', time: 'invalid' }] }); assert.equal(invalid.status, 400)
   assert.deepEqual(await get(), saved)
+  const wildcardResponse = await put({ ...saved, exclusions: ['8.8.8.8', '220.130.148.*'] })
+  assert.equal(wildcardResponse.status, 200)
+  const wildcardSaved = await get()
+  assert.deepEqual(wildcardSaved.exclusions, ['220.130.148.*', '8.8.8.8'])
   await pool.query(`create function fail_ip_insert() returns trigger language plpgsql as $$ begin raise exception 'test failure'; end $$; create trigger fail_ip_insert before insert on public.ip_exclusions for each row execute function fail_ip_insert()`)
-  const failed = await put({ ...saved, entries: [{ ip: '4.4.4.4', time: '' }], exclusions: ['7.7.7.7'] })
-  assert.equal(failed.status, 500); assert.deepEqual(await get(), saved)
+  const failed = await put({ ...wildcardSaved, entries: [{ ip: '4.4.4.4', time: '' }], exclusions: ['7.7.7.7'] })
+  assert.equal(failed.status, 500); assert.deepEqual(await get(), wildcardSaved)
 })

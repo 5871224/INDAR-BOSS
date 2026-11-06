@@ -59,6 +59,17 @@ trap rollback ERR
 git -C "$repo" reset --hard "$revision"
 if [[ "$backend_changed" == true ]]; then
   npm ci --omit=dev --ignore-scripts --prefix "$repo"
+fi
+if ! git -C "$repo" diff --quiet "$previous" "$revision" -- database/ip-blocking.sql; then
+  test -r /etc/indar-soyal/database.env
+  (
+    set -a
+    source /etc/indar-soyal/database.env
+    set +a
+    node "$repo/scripts/migrate-ip-blocking.mjs"
+  )
+fi
+if [[ "$backend_changed" == true ]]; then
   restart_backend
 fi
 rsync -a --delete "$repo/pages/" "$target/pages/"

@@ -1,8 +1,8 @@
-import { ipAddress, ipOrder, mergeEvents, rulesFor, timestamp, exclusionPasteValues } from './logic.js';
+import { ipAddress, ipOrder, exclusionPattern, mergeEvents, rulesFor, timestamp, exclusionPasteValues, wildcardSearch, displayDate } from './logic.js';
 
 const $ = id => document.getElementById(id);
 let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, saving = false, exclusionDraft = [''];
-const columns = { ip: 'IP', rule: '轉格式', time: '更新時間' };
+const columns = { ip: 'IP', rule: '轉格式', time: '更新日期' };
 const columnFilters = { ip: '', rule: '', time: '' };
 const thresholdKey = 'indar-boss-ip-threshold';
 const deleteSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg>';
@@ -37,7 +37,7 @@ function showCopyToast() {
 function columnText(row, column) {
   if (column === 'ip') return row.ip + ' ' + ipOrder(row.ip);
   if (column === 'rule') return row.rule;
-  return row.time || '';
+  return displayDate(row.time);
 }
 function compareRows(a, b, column) {
   if (column === 'ip') return ipOrder(a.ip).localeCompare(ipOrder(b.ip));
@@ -73,7 +73,7 @@ function validateState(input) {
     if (!ip || (time && !Number.isFinite(timestamp(time))) || entries.has(ip)) throw new Error('清單含無效、重複的 IP 或無效時間');
     entries.set(ip, { ip, time });
   }
-  const exclusions = input.exclusions.map(ipAddress);
+  const exclusions = input.exclusions.map(exclusionPattern);
   if (exclusions.some(ip => !ip) || new Set(exclusions).size !== exclusions.length) throw new Error('排除清單含無效或重複 IP');
   return { entries: [...entries.values()], exclusions, threshold: input.threshold };
 }
@@ -109,7 +109,7 @@ function render() {
   $('excludeCounts').textContent = counts ? `本次匯入排除 IP 次數：${state.exclusions.map(ip => `${ip}：${counts[ip] || 0}`).join('、') || '無排除 IP'}` : '';
   let rows = rulesFor(state.entries, currentThreshold());
   rows = rows.filter(row => Object.keys(columns).every(column =>
-    columnText(row, column).toLowerCase().includes(columnFilters[column].toLowerCase())
+    wildcardSearch(columnText(row, column), columnFilters[column])
   ));
   rows.sort((a, b) => {
     const order = compareRows(a, b, sortColumn) * (sortDirection === 'asc' ? 1 : -1);
@@ -121,7 +121,7 @@ function render() {
   }
   $('blockRows').replaceChildren(...rows.map(row => {
     const tr = document.createElement('tr'); if (row.merged) tr.className = 'merged';
-    for (const value of [ipOrder(row.ip), row.rule, row.time]) { const td = document.createElement('td'); td.textContent = value; tr.append(td); }
+    for (const value of [ipOrder(row.ip), row.rule, displayDate(row.time)]) { const td = document.createElement('td'); td.textContent = value; tr.append(td); }
     const td = document.createElement('td'), button = document.createElement('button');
     button.type = 'button'; button.className = 'boss-action-icon boss-action-delete';
     button.innerHTML = deleteSvg; button.dataset.ip = row.ip;
@@ -156,13 +156,55 @@ $('setThreshold').onclick = () => {
   status('已套用合併數量');
 };
 function meaningfulExclusions() { return exclusionDraft.map(value => value.trim()).filter(Boolean); }
-function focusExclusion(index) { $('exclusionRows').querySelector(`[data-index="${index}"]`)?.focus(); }
+function focusExclusion(index) { $('exclusionRows').querySelector(`[data-index="${index}"]`)?.focus({ preventScroll: true }); }
+
+// The iframe grows with table content. Place the modal in the currently visible
+// section of the frame instead of centering it in the whole tall document.
+function positionExclusionDialog() {
+  const dialog = $('exclusionDialog');
+  if (!dialog.open) return;
+  try {
+    const frame = window.frameElement;
+    if (!frame) return;
+    const rect = frame.getBoundingClientRect();
+    const viewport = window.parent.innerHeight;
+    const visibleTop = Math.max(0, -rect.top);
+    const visibleBottom = Math.min(rect.height, viewport - rect.top);
+    const available = Math.max(0, visibleBottom - visibleTop);
+    dialog.style.position = 'absolute';
+    dialog.style.margin = '0';
+    dialog.style.left = '50%';
+    dialog.style.right = 'auto';
+    dialog.style.bottom = 'auto';
+    dialog.style.transform = 'translateX(-50%)';
+    dialog.style.maxHeight = Math.max(160, Math.min(viewport - 32, available - 24)) + 'px';
+    const height = dialog.getBoundingClientRect().height;
+    dialog.style.top = Math.max(12, visibleTop + Math.max(0, available - height) / 2) + 'px';
+  } catch { /* Standalone or cross-origin views keep native dialog positioning. */ }
+}
+let trackingExclusionDialog = false;
+function trackExclusionDialog() {
+  if (trackingExclusionDialog) return;
+  try {
+    if (!window.frameElement) return;
+    window.parent.addEventListener('scroll', positionExclusionDialog, { passive: true });
+    window.parent.addEventListener('resize', positionExclusionDialog);
+    trackingExclusionDialog = true;
+  } catch { /* Embedded cross-origin fallback. */ }
+}
+function stopTrackingExclusionDialog() {
+  if (!trackingExclusionDialog) return;
+  window.parent.removeEventListener('scroll', positionExclusionDialog);
+  window.parent.removeEventListener('resize', positionExclusionDialog);
+  trackingExclusionDialog = false;
+}
+$('exclusionDialog').addEventListener('close', stopTrackingExclusionDialog);
 function appendExclusionRow(index) {
   const row = document.createElement('tr');
   const number = document.createElement('td'); number.textContent = String(index + 1);
   const cell = document.createElement('td'); const input = document.createElement('input');
   input.type = 'text'; input.value = exclusionDraft[index]; input.dataset.index = String(index);
-  input.autocomplete = 'off'; input.spellcheck = false; input.placeholder = '例如 192.168.1.1';
+  input.autocomplete = 'off'; input.spellcheck = false; input.placeholder = '例如 220.130.148.*';
   input.setAttribute('aria-label', `第 ${index + 1} 列排除 IP`);
   const removeCell = document.createElement('td'); const remove = document.createElement('button');
   remove.type = 'button'; remove.className = 'boss-action-icon boss-action-delete';
@@ -180,7 +222,10 @@ function ensureBlankRow() {
 window.hasUnsavedExclusions = () => $('exclusionDialog').open && meaningfulExclusions().join('\n') !== state.exclusions.join('\n');
 $('openExclusions').onclick = () => {
   exclusionDraft = [...state.exclusions, '']; renderExclusions(); $('exclusionStatus').textContent = '';
-  $('exclusionDialog').showModal(); focusExclusion(exclusionDraft.length - 1);
+  $('exclusionDialog').showModal();
+  positionExclusionDialog();
+  trackExclusionDialog();
+  focusExclusion(exclusionDraft.length - 1);
 };
 $('exclusionRows').addEventListener('input', event => {
   const index = Number(event.target.dataset.index);
@@ -222,7 +267,7 @@ $('addExclusion').onclick = () => { exclusionDraft.push(''); appendExclusionRow(
 $('closeExclusions').onclick = () => $('exclusionDialog').close();
 $('saveExclusions').onclick = async () => {
   try {
-    const raw = meaningfulExclusions(); const exclusions = raw.map(ipAddress);
+    const raw = meaningfulExclusions(); const exclusions = raw.map(exclusionPattern);
     const invalid = exclusions.findIndex(ip => !ip);
     if (invalid >= 0) {
       const row = exclusionDraft.findIndex(value => value.trim() === raw[invalid]);

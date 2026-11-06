@@ -12,7 +12,7 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
     addEventListener(name, fn) { this.listeners[name] = fn; }, focus() { this.focused = true; },
     getBoundingClientRect() { return { left: 40, bottom: 80 }; },
     contains(node) { return this === node || this.children.some(child => child.contains?.(node)); },
-    showModal() { this.open = true; }, close() { this.open = false; },
+    showModal() { this.open = true; }, close() { this.open = false; this.listeners.close?.(); },
     querySelector(selector) {
       const index = selector.match(/^\[data-index="(\d+)"\]$/)?.[1];
       function find(node) { if (node.dataset.index === index && index !== undefined) return node; for (const child of node.children) { const found = find(child); if (found) return found; } return null; }
@@ -56,7 +56,15 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.match($('blockStatus').textContent, /2～254/);
   assert.equal(browserValues.get('indar-boss-ip-threshold'), '5');
   $('threshold').value = 5;
-  $('openExclusions').onclick(); assert.equal($('exclusionDialog').open, true);
+  const parentHandlers = {};
+  window.frameElement = { getBoundingClientRect() { return { top: -500, height: 2500 }; } };
+  window.parent = { innerHeight: 800, addEventListener(type, handler) { parentHandlers[type] = handler; }, removeEventListener(type) { delete parentHandlers[type]; } };
+  $('exclusionDialog').getBoundingClientRect = () => ({ height: 480 });
+  $('openExclusions').onclick();
+  assert.equal($('exclusionDialog').open, true);
+  assert.equal($('exclusionDialog').style.position, 'absolute');
+  assert.ok(parseFloat($('exclusionDialog').style.top) >= 500);
+  assert.equal(typeof parentHandlers.scroll, 'function');
   assert.equal(input(0).value, '8.8.8.8'); assert.equal(input(1).value, '');
   assert.equal(paste(1, ' 7.7.7.7\t1.2.3.4\r\n9.9.9.9\t\r\n'), true);
   assert.equal(input(0).value, '8.8.8.8'); assert.equal(input(1).value, '7.7.7.7'); assert.equal(input(3).value, '9.9.9.9');
@@ -72,8 +80,10 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.equal($('exclusionDialog').open, false); assert.deepEqual(shared.exclusions, ['8.8.8.8', '7.7.7.7', '1.2.3.4', '9.9.9.9']);
   $('openExclusions').onclick(); input(4).value = 'bad-ip'; $('exclusionRows').listeners.input({ target: input(4) });
   await $('saveExclusions').onclick(); assert.match($('exclusionStatus').textContent, /第 5 列 IP 格式有誤/); assert.equal(input(4).attributes['aria-invalid'], 'true');
-  $('closeExclusions').onclick(); assert.equal($('exclusionDialog').open, false); assert.deepEqual(shared.exclusions, ['8.8.8.8', '7.7.7.7', '1.2.3.4', '9.9.9.9']);
+  $('closeExclusions').onclick(); assert.equal($('exclusionDialog').open, false);
+  assert.equal(parentHandlers.scroll, undefined); assert.deepEqual(shared.exclusions, ['8.8.8.8', '7.7.7.7', '1.2.3.4', '9.9.9.9']);
   await change('events', 'eventTime,dstIp,srcIp\n2025-01-02 10:00:00,7.7.7.7,1.2.3.5');
+  assert.equal($('blockRows').children[0].children[2].textContent, '2025/1/1');
   assert.equal(shared.entries.some(e => e.ip === '7.7.7.7'), false);
   assert.equal(shared.entries.some(e => e.ip === '1.2.3.5'), true);
   const before = JSON.stringify(shared);
@@ -81,6 +91,9 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.equal(JSON.stringify(shared), before);
   $('columnTool-ip').onclick();
   assert.equal($('columnMenu').hidden, false);
+  $('columnSearch').value = '4.*4';
+  $('columnSearch').oninput({ target: $('columnSearch') });
+  assert.equal($('blockRows').children.length, 1);
   $('columnSearch').value = '4.4.';
   $('columnSearch').oninput({ target: $('columnSearch') });
   assert.equal($('blockRows').children.length, 1);
