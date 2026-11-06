@@ -35,6 +35,7 @@ async function fixture({ access = [401], hash = '', signout = 200, settings = 20
   const location = { hash }
   vm.runInNewContext(script, {
     document: {
+      body: new Element('body'),
       querySelector(selector) { const element = elements.get(selector.slice(1)); assert.ok(element, selector); return element },
       querySelectorAll() { return [] },
       getElementById(id) { return elements.get(id) }
