@@ -31,12 +31,21 @@ function showPage(){
 }
 window.addEventListener('hashchange',showPage);
 
-// IP 內容與外頁共用瀏覽器的捲軸；表格表頭依外頁捲動量固定。
+// Keep the IP header stationary without scroll-linked CSS top transitions.
 let ipResizeObserver = null;
 function syncIpStickyHeader() {
   if (ipPage.hidden || !ipPage.contentDocument || !ipPage.getBoundingClientRect) return;
-  const offset = Math.max(0, Math.ceil(-ipPage.getBoundingClientRect().top));
-  ipPage.contentDocument.documentElement.style.setProperty('--boss-sticky-offset', offset + 'px');
+  const doc = ipPage.contentDocument;
+  const table = doc.querySelector('.table-wrap table');
+  const header = table?.tHead;
+  if (!header) return;
+  const frameTop = ipPage.getBoundingClientRect().top;
+  const tableTop = table.getBoundingClientRect().top;
+  const headerHeight = header.getBoundingClientRect().height;
+  const maxTravel = Math.max(0, table.getBoundingClientRect().height - headerHeight);
+  const travel = Math.min(maxTravel, Math.max(0, -frameTop - tableTop));
+  const transform = travel ? `translate3d(0, ${Math.ceil(travel)}px, 0)` : '';
+  if (header.style.transform !== transform) header.style.transform = transform;
 }
 function resizeIpFrame() {
   const doc = ipPage.contentDocument;

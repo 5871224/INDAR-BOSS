@@ -144,7 +144,7 @@ test('IP 內容使用外層頁面捲動，且僅主表格表頭黏附外層視�
   assert.match(parentCss, /body\.ip-active\{height:auto;overflow-y:auto\}/)
   assert.match(parentCss, /body\.ip-active #ipPage\{display:block;width:100%;height:150px;overflow:hidden\}/)
   assert.doesNotMatch(parentCss, /body\.ip-active\{height:100dvh;overflow:hidden\}/)
-  assert.match(ipCss, /\.table-wrap th\{top:var\(--boss-sticky-offset,0px\)\}/)
+  assert.match(ipCss, /\.table-wrap thead\{position:relative;z-index:2;transition:none;animation:none;will-change:transform\}/)
   assert.match(script, /window\.addEventListener\('scroll', syncIpStickyHeader, \{passive: true\}\)/)
   assert.match(script, /new ResizeObserver\(resizeIpFrame\)/)
 })
@@ -168,9 +168,10 @@ test('SOYAL 標題同列與共用頁面寬度', () => {
 test('SOYAL 主表格使用瀏覽器外層垂直捲軸，換頁返回表格頂部', () => {
   const css = readFileSync(new URL('../pages/soyal/styles.css', import.meta.url), 'utf8')
   assert.match(css, /\.table-card\{padding:0;overflow:visible\}/)
-  assert.match(css, /\.table-wrap\{width:100%;max-height:none;overflow-x:auto;overflow-y:visible\}/)
+  assert.match(css, /\.table-wrap\{width:100%;max-height:none;overflow:visible\}/)
   assert.doesNotMatch(css, /\.table-wrap\{overflow:auto;max-height:68vh\}/)
   assert.match(script, /currentPage=next;render\(\);tableWrap\.scrollIntoView\?\.\(\{ block: 'start' \}\)/)
+  assert.match(css, /#tableWrap table\{border-collapse:separate;border-spacing:0\}/)
   assert.doesNotMatch(script, /tableWrap\.scrollTop=0/)
 })
 
@@ -182,4 +183,13 @@ test('IP 與 SOYAL 表格表頭共用加深的藍灰色', () => {
     assert.match(css, /box-shadow:0 1px 0 #b7c9df/)
   }
   assert.match(soyalCss, /th\.sortable:hover\{background:#bed1e8\}/)
+})
+
+test('IP 表頭使用即時位移而非逐次調整 sticky top', () => {
+  const ipCss = readFileSync(new URL('../pages/ip/styles.css', import.meta.url), 'utf8')
+  assert.match(script, /header\.style\.transform = transform/)
+  assert.match(script, /Math\.min\(maxTravel, Math\.max\(0, -frameTop - tableTop\)\)/)
+  assert.doesNotMatch(script, /boss-sticky-offset/)
+  assert.match(ipCss, /\.table-wrap th\{position:static;top:auto\}/)
+  assert.doesNotMatch(ipCss, /boss-sticky-offset/)
 })
