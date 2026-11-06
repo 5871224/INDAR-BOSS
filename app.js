@@ -60,11 +60,11 @@ async function checkAccess(){
   const response=await fetch('./api/access',{credentials:'same-origin',cache:'no-store'});
   let result={};try{result=await response.json();}catch{}
   if(response.ok){await loadSettings();loginForm.hidden=true;accessGate.hidden=true;appShell.hidden=false;return;}
-  const error=new Error(typeof result.error==='string'?result.error:'無法確認 SOYAL 使用權限');error.status=response.status;throw error;
+  const error=new Error(typeof result.error==='string'?result.error:'無法確認 BOSS 使用權限');error.status=response.status;throw error;
 }
 function showAccessError(error){
   appShell.hidden=true;accessGate.hidden=false;loginForm.hidden=error.status!==401&&error.status!==403;
-  accessMessage.textContent=error.status===401?'':error.status===403?'此帳號尚未開放使用 SOYAL，請聯絡管理員。':error.status>=500?'SOYAL 權限服務暫時無法使用，請稍後再試。':error.message;
+  accessMessage.textContent=error.status===401?'':error.status===403?'此帳號尚未開放使用 BOSS，請聯絡管理員。':error.status>=500?'BOSS 權限服務暫時無法使用，請稍後再試。':error.message;
   accessMessage.classList.toggle('error',error.status!==401);
 }
 

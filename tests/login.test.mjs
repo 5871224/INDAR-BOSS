@@ -92,7 +92,7 @@ test('an authenticated employee without SOYAL permission remains locked out', as
   await f.login('0270', 'password')
   assert.equal(f.elements.get('appShell').hidden, true)
   assert.equal(f.elements.get('loginForm').hidden, false)
-  assert.match(f.elements.get('accessMessage').textContent, /尚未開放使用 SOYAL/)
+  assert.match(f.elements.get('accessMessage').textContent, /尚未開放使用 BOSS/)
   assert.equal(f.requests.filter(item => item.url.startsWith('./api/settings?')).length, 0)
 })
 
