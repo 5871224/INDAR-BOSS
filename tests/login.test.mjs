@@ -155,3 +155,12 @@ test('IP 與 SOYAL 共用一致的分頁上方間距', () => {
   assert.match(css, /@media\(max-width:700px\)\{\.header\{margin:-14px -14px 8px;padding:14px 14px 8px\}\}/)
   assert.doesNotMatch(css, /body\.ip-active \.header\{/)
 })
+
+test('SOYAL 標題同列與共用頁面寬度', () => {
+  const stylesheet = readFileSync(new URL('../pages/soyal/styles.css', import.meta.url), 'utf8')
+  assert.match(html, /<div class="soyal-actions">\s*<h2 class="soyal-title">SOYAL檔案解析<\/h2>\s*<button id="doorSettingsBtn"/)
+  assert.doesNotMatch(html, /可同時解析多個 SOYAL \.msg/)
+  assert.match(stylesheet, /\.wrap\{max-width:none;width:100%;margin:0;padding:28px\}/)
+  assert.match(stylesheet, /\.soyal-actions \.soyal-title\{[^}]*margin:0 auto 0 0\}/)
+  assert.match(stylesheet, /#soyalPage\{width:100%;min-width:0\}/)
+})
