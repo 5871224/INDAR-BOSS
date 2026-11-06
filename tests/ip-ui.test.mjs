@@ -166,3 +166,13 @@ test('IP 操作按鈕和標題同一行，操作列靠右排列', async () => {
   assert.match(css, /\.ip-toolbar\{display:flex;align-items:center;justify-content:flex-end/);
   assert.match(css, /@media\(max-width:620px\)\{\.ip-heading\{align-items:flex-start/);
 });
+
+test('IP 頁面不使用包住標題、操作列和表格的卡片', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../pages/ip/index.html', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../pages/ip/styles.css', import.meta.url), 'utf8');
+  assert.match(html, /<main class="wrap" id="appShell" hidden>\s*<div class="ip-heading">/);
+  assert.doesNotMatch(html, /<section class="card">/);
+  assert.match(css, /\.table-wrap\{[^}]*background:#fff/);
+  assert.doesNotMatch(css, /\.card\{background:#fff/);
+});
