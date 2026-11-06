@@ -7,7 +7,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 repo=/home/indar/deploy/INDAR-SOYAL
-target=/srv/web/soyal
+target=/srv/web/boss
 env_file=/etc/indar-soyal/database.env
 unit=/etc/systemd/system/indar-soyal.service
 files=(index.html pages/soyal/app.js pages/soyal/parser.js pages/soyal/excel.js pages/soyal/event-excel.js pages/soyal/settings-excel-ui.js pages/soyal/styles.css pages/ip/index.html pages/ip/app.js pages/ip/logic.js pages/ip/styles.css)

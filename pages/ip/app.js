@@ -87,7 +87,7 @@ $('restore').onchange = event => fileAction(event.target, async file => { const 
 async function start() {
   try {
     const response = await fetch('../../api/access', { credentials: 'same-origin', cache: 'no-store' });
-    if (response.status === 401) { window.top.indarAuth.goToLogin('/soyal/#ip'); return; }
+    if (response.status === 401) { window.top.indarAuth.goToLogin('/boss/#ip'); return; }
     if (!response.ok) throw new Error(response.status === 403 ? '此帳號尚未開放使用 BOSS，請聯絡管理員。' : 'BOSS 權限服務暫時無法使用，請稍後再試。');
     try { rawSaved = localStorage.getItem(storageKey); if (rawSaved !== null) state = validateState(JSON.parse(rawSaved)); }
     catch (error) { loadFailed = true; status(`無法讀取本機資料：${error.message}。請還原備份，避免覆寫原資料。`, true); }

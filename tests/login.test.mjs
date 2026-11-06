@@ -61,7 +61,7 @@ async function fixture({ access = [401], hash = '', signout = 200, settings = 20
 
 test('logged-out visitors use the shared login page and SOYAL stays closed', async () => {
   const f = await fixture()
-  assert.deepEqual(f.redirects, ['/soyal/'])
+  assert.deepEqual(f.redirects, ['/boss/'])
   assert.equal(f.elements.get('appShell').hidden, true)
   assert.equal(f.requests.filter(item => item.url === './api/access').length, 1)
 })
@@ -99,7 +99,7 @@ test('IP tab navigation keeps the shell and identity, and sign-out uses the shar
   await f.elements.get('logoutBtn').listeners.click()
   assert.equal(f.requests.at(-1).url, '/sched/api/v1/auth/sign-out')
   assert.equal(f.requests.at(-1).options.method, 'POST')
-  assert.deepEqual(f.redirects, ['/soyal/'])
+  assert.deepEqual(f.redirects, ['/boss/'])
 })
 
 test('failed sign-out stays on the page and reports the error', async () => {
@@ -112,7 +112,7 @@ test('failed sign-out stays on the page and reports the error', async () => {
 test('an expired sign-out redirects to the shared login page', async () => {
   const f = await fixture({ access: [200], signout: 401 })
   await f.elements.get('logoutBtn').listeners.click()
-  assert.deepEqual(f.redirects, ['/soyal/'])
+  assert.deepEqual(f.redirects, ['/boss/'])
 })
 
 test('SOYAL settings failure does not block the IP page', async () => {
@@ -124,5 +124,5 @@ test('SOYAL settings failure does not block the IP page', async () => {
 
 test('an unauthenticated IP link returns to IP after login', async () => {
   const f = await fixture({ hash: '#ip' })
-  assert.deepEqual(f.redirects, ['/soyal/#ip'])
+  assert.deepEqual(f.redirects, ['/boss/#ip'])
 })
