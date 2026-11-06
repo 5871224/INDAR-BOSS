@@ -34,3 +34,6 @@ grant usage on schema public to soyal_app;
 revoke all on public.door_settings, public.user_settings, public.soyal_access from public;
 grant select, insert, update, delete on public.door_settings, public.user_settings, public.soyal_access to soyal_app;
 grant usage, select on sequence public.door_settings_id_seq, public.user_settings_id_seq to soyal_app;
+
+-- Shared IP block and exclusion lists.
+\ir ip-blocking.sql
