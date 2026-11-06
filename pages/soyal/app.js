@@ -27,8 +27,46 @@ function showPage(){
   $('#soyalTab').setAttribute('aria-current',ip?'false':'page');
   $('#ipTab').setAttribute('aria-current',ip?'page':'false');
   if(ip&&!ipPage.getAttribute('src'))ipPage.src='pages/ip/';
+  if(ip) syncIpStickyHeader();
 }
 window.addEventListener('hashchange',showPage);
+
+// IP 內容與外頁共用瀏覽器的捲軸；表格表頭依外頁捲動量固定。
+let ipResizeObserver = null;
+function syncIpStickyHeader() {
+  if (ipPage.hidden || !ipPage.contentDocument || !ipPage.getBoundingClientRect) return;
+  const offset = Math.max(0, Math.ceil(-ipPage.getBoundingClientRect().top));
+  ipPage.contentDocument.documentElement.style.setProperty('--boss-sticky-offset', offset + 'px');
+}
+function resizeIpFrame() {
+  const doc = ipPage.contentDocument;
+  if (!doc) return;
+  const bottom = Math.max(0, ...['accessGate', 'appShell'].map(id => {
+    const el = doc.getElementById(id);
+    return el && !el.hidden ? el.getBoundingClientRect().bottom : 0;
+  }));
+  if (bottom > 0) {
+    const height = Math.ceil(bottom + 24);
+    if (ipPage.style.height !== height + 'px') ipPage.style.height = height + 'px';
+  }
+  syncIpStickyHeader();
+}
+ipPage.addEventListener('load', () => {
+  const doc = ipPage.contentDocument;
+  if (!doc) return;
+  ipResizeObserver?.disconnect();
+  if (typeof ResizeObserver !== 'undefined') {
+    ipResizeObserver = new ResizeObserver(resizeIpFrame);
+    for (const id of ['accessGate', 'appShell']) {
+      const el = doc.getElementById(id);
+      if (el) ipResizeObserver.observe(el);
+    }
+  }
+  resizeIpFrame();
+});
+window.addEventListener('scroll', syncIpStickyHeader, {passive: true});
+window.addEventListener('resize', resizeIpFrame);
+
 $('#logoutBtn').addEventListener('click',async()=>{
   const changed=Boolean(ipPage.contentWindow?.hasUnsavedExclusions?.());
   if((filesLoaded||changed)&&!confirm('目前有尚未保存的資料，登出後將清除畫面內容。確定登出？'))return;

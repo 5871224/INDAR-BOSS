@@ -137,3 +137,14 @@ test('an unauthenticated IP link returns to IP after login', async () => {
   const f = await fixture({ hash: '#ip' })
   assert.deepEqual(f.redirects, ['/boss/#ip'])
 })
+
+test('IP 內容使用外層頁面捲動，且僅主表格表頭黏附外層視窗', () => {
+  const parentCss = readFileSync(new URL('../pages/soyal/styles.css', import.meta.url), 'utf8')
+  const ipCss = readFileSync(new URL('../pages/ip/styles.css', import.meta.url), 'utf8')
+  assert.match(parentCss, /body\.ip-active\{height:auto;overflow-y:auto\}/)
+  assert.match(parentCss, /body\.ip-active #ipPage\{display:block;width:100%;height:150px;overflow:hidden\}/)
+  assert.doesNotMatch(parentCss, /body\.ip-active\{height:100dvh;overflow:hidden\}/)
+  assert.match(ipCss, /\.table-wrap th\{top:var\(--boss-sticky-offset,0px\)\}/)
+  assert.match(script, /window\.addEventListener\('scroll', syncIpStickyHeader, \{passive: true\}\)/)
+  assert.match(script, /new ResizeObserver\(resizeIpFrame\)/)
+})

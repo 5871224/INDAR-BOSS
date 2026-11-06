@@ -21,8 +21,9 @@ dialog{width:min(92%,580px);max-height:min(80vh,600px);overflow:auto;border:1px 
 
 .exclusion-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.exclusion-dialog-header h3{margin:0}.exclusion-dialog-close{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;background:transparent;color:#526079;flex:none}
 
-/* IP 內容以外層 iframe 視窗捲動；表頭固定於視窗頂部。 */
+/* 表頭位置隨外層頁面捲動量同步，排除清單對話框維持自身捲動。 */
 .table-wrap table{border-collapse:separate;border-spacing:0}
+.table-wrap th{top:var(--boss-sticky-offset,0px)}
 .table-wrap th,.table-wrap td{border-bottom:1px solid #e8edf3}
 .th-inner{display:inline-flex;align-items:center;gap:7px;min-height:24px}
 .header-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:4px;border:0;border-radius:6px;background:transparent;color:#526079}
