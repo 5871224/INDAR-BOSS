@@ -17,8 +17,6 @@
     <header>
       <h1>INDAR-BOSS</h1>
       <div class="header-actions">
-        <button id="doorSettingsBtn">門號設定</button>
-        <button id="userSettingsBtn">使用者設定</button>
         <a class="home-link" href="/" aria-label="返回首頁" title="返回首頁">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="m3 10 9-7 9 7" />
@@ -32,6 +30,11 @@
       <a href="./" aria-current="page">SOYAL</a>
       <a href="pages/ip/">IP檢查</a>
     </nav>
+
+    <div class="soyal-actions">
+      <button id="doorSettingsBtn" type="button">門號設定</button>
+      <button id="userSettingsBtn" type="button">使用者設定</button>
+    </div>
 
     <section class="card uploader" id="dropZone">
       <input id="fileInput" type="file" accept=".msg,application/octet-stream" multiple hidden />
