@@ -58,6 +58,6 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.equal(shared.entries.some(e => e.ip === '7.7.7.7'), false);
   assert.equal(shared.entries.some(e => e.ip === '1.2.3.5'), true);
   const before = JSON.stringify(shared);
-  await change('list', 'IP,更新時間\nnot-ip,2025/1/2');
+  await change('events', 'IP,更新時間\nnot-ip,2025/1/2');
   assert.equal(JSON.stringify(shared), before);
 });
