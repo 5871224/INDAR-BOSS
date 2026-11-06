@@ -198,8 +198,15 @@ function exportExcel(){
 }
 
 function setMessage(id,text,isError=false){const el=$(id);el.textContent=text;el.classList.toggle('error',isError);}
-function renderDoorSettings(){const tbody=$('#doorSettingsBody');tbody.innerHTML=doorSettings.map(d=>`<tr><td>${d.door_no}</td><td>${esc(d.door_name)}</td><td><button data-action="edit" data-id="${d.id}">編輯</button> <button class="danger" data-action="delete" data-id="${d.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan="3" class="empty-cell">尚無門號設定</td></tr>';}
-function renderUserSettings(){const tbody=$('#userSettingsBody');tbody.innerHTML=userSettings.map(u=>`<tr><td>${formatUserCode(u.user_address)}</td><td>${esc(u.user_name)}</td><td><button data-action="edit" data-id="${u.id}">編輯</button> <button class="danger" data-action="delete" data-id="${u.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan="3" class="empty-cell">尚無使用者設定</td></tr>';}
+/* Exact pencil/trashcan SVG paths from the shared shift schedule controls. */
+const settingsIconPaths = { edit: '<path d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>', delete: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/>' };
+function settingsActionButton(kind, id) {
+  const label = kind === 'edit' ? '修改' : '刪除';
+  const className = 'boss-action-icon' + (kind === 'delete' ? ' boss-action-delete' : '');
+  return `<button type="button" class="${className}" data-action="${kind}" data-id="${esc(id)}" aria-label="${label}" title="${label}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${settingsIconPaths[kind]}</svg></button>`;
+}
+function renderDoorSettings(){const tbody=$('#doorSettingsBody');tbody.innerHTML=doorSettings.map(d=>`<tr><td>${d.door_no}</td><td>${esc(d.door_name)}</td><td>${settingsActionButton('edit', d.id)} ${settingsActionButton('delete', d.id)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty-cell">尚無門號設定</td></tr>';}
+function renderUserSettings(){const tbody=$('#userSettingsBody');tbody.innerHTML=userSettings.map(u=>`<tr><td>${formatUserCode(u.user_address)}</td><td>${esc(u.user_name)}</td><td>${settingsActionButton('edit', u.id)} ${settingsActionButton('delete', u.id)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty-cell">尚無使用者設定</td></tr>';}
 
 async function saveDoorSetting(e){e.preventDefault();const id=Number($('#doorEditId').value)||null;const data={door_no:Number($('#doorNo').value),door_name:$('#doorName').value.trim()};try{setMessage('#doorMessage','儲存中…');await settingsRequest('doors',id?'PUT':'POST',id?{id,data}:{data});resetDoorForm();await loadSettings();setMessage('#doorMessage','已儲存');}catch(err){setMessage('#doorMessage',err.message,true);}}
 async function saveUserSetting(e){e.preventDefault();const id=Number($('#userEditId').value)||null;const data={user_address:Number($('#userAddressInput').value),user_name:$('#userName').value.trim()};try{setMessage('#userMessage','儲存中…');await settingsRequest('users',id?'PUT':'POST',id?{id,data}:{data});resetUserForm();await loadSettings();setMessage('#userMessage','已儲存');}catch(err){setMessage('#userMessage',err.message,true);}}

@@ -2,15 +2,42 @@ import { ipAddress, ipOrder, mergeEvents, rulesFor, timestamp, exclusionPasteVal
 
 const $ = id => document.getElementById(id);
 let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, saving = false, exclusionDraft = [''];
-const columns = { ip: 'IP', rule: '轉格式', time: '更新時間', action: '操作' };
-const columnFilters = { ip: '', rule: '', time: '', action: '' };
+const columns = { ip: 'IP', rule: '轉格式', time: '更新時間' };
+const columnFilters = { ip: '', rule: '', time: '' };
+const thresholdKey = 'indar-boss-ip-threshold';
+const deleteSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg>';
 let sortColumn = 'ip', sortDirection = 'asc', menuColumn = null;
+let preferredThreshold = null, copyToastTimer = null;
+const currentThreshold = () => preferredThreshold ?? state.threshold;
+function readBrowserThreshold() {
+  try {
+    const raw = localStorage.getItem(thresholdKey);
+    const n = raw === null ? NaN : Number(raw);
+    return Number.isInteger(n) && n >= 2 && n <= 254 ? n : null;
+  } catch { return null; }
+}
+function saveBrowserThreshold(value) {
+  preferredThreshold = value;
+  try { localStorage.setItem(thresholdKey, String(value)); } catch { /* Storage may be disabled. */ }
+}
+function roundedThreshold() {
+  const raw = String($('threshold').value).trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.ceil(n) : null;
+}
+function showCopyToast() {
+  const toast = $('copyToast');
+  toast.hidden = false;
+  clearTimeout(copyToastTimer);
+  copyToastTimer = setTimeout(() => { toast.hidden = true; }, 2400);
+  copyToastTimer?.unref?.();
+}
 
 function columnText(row, column) {
   if (column === 'ip') return row.ip + ' ' + ipOrder(row.ip);
   if (column === 'rule') return row.rule;
-  if (column === 'time') return row.time || '';
-  return '刪除';
+  return row.time || '';
 }
 function compareRows(a, b, column) {
   if (column === 'ip') return ipOrder(a.ip).localeCompare(ipOrder(b.ip));
@@ -78,10 +105,10 @@ async function fileAction(input, fn) {
   finally { input.value = ''; }
 }
 function render() {
-  $('threshold').value = state.threshold;
-  $('exclusionSummary').textContent = `目前 ${state.exclusions.length} 個排除 IP`;
+  if (document.activeElement !== $('threshold')) $('threshold').value = currentThreshold();
+  $('exclusionSummary').textContent = String(state.exclusions.length);
   $('excludeCounts').textContent = counts ? `本次匯入排除 IP 次數：${state.exclusions.map(ip => `${ip}：${counts[ip] || 0}`).join('、') || '無排除 IP'}` : '';
-  let rows = rulesFor(state.entries, state.threshold);
+  let rows = rulesFor(state.entries, currentThreshold());
   rows = rows.filter(row => Object.keys(columns).every(column =>
     columnText(row, column).toLowerCase().includes(columnFilters[column].toLowerCase())
   ));
@@ -96,18 +123,39 @@ function render() {
   $('blockRows').replaceChildren(...rows.map(row => {
     const tr = document.createElement('tr'); if (row.merged) tr.className = 'merged';
     for (const value of [ipOrder(row.ip), row.rule, row.time]) { const td = document.createElement('td'); td.textContent = value; tr.append(td); }
-    const td = document.createElement('td'), button = document.createElement('button'); button.textContent = '刪除'; button.dataset.ip = row.ip; button.setAttribute('aria-label', `刪除 ${row.ip}`); td.append(button); tr.append(td); return tr;
+    const td = document.createElement('td'), button = document.createElement('button');
+    button.type = 'button'; button.className = 'boss-action-icon boss-action-delete';
+    button.innerHTML = deleteSvg; button.dataset.ip = row.ip;
+    button.setAttribute('aria-label', `刪除 ${row.ip}`); button.title = `刪除 ${row.ip}`;
+    td.append(button); tr.append(td); return tr;
   }));
 }
 async function copy(text) {
   try {
     if (!text) throw new Error('沒有可複製的資料');
     await navigator.clipboard.writeText(text);
-    status('已複製去重後的阻擋規則');
+    showCopyToast();
   } catch (error) { status(error.message || '複製失敗，請確認瀏覽器權限', true); }
 }
 
-$('setThreshold').onclick = () => action(async () => { const threshold = Number($('threshold').value); await commit({ ...state, threshold }); status('已更新合併數量'); });
+$('threshold').onchange = () => {
+  const n = roundedThreshold();
+  if (n !== null) $('threshold').value = n;
+};
+$('setThreshold').onclick = () => {
+  const n = roundedThreshold();
+  if (n === null || n < 2 || n > 254) {
+    $('threshold').setAttribute('aria-invalid', 'true');
+    status('合併數量須介於 2～254，請輸入有效數字', true);
+    $('threshold').focus();
+    return;
+  }
+  $('threshold').removeAttribute('aria-invalid');
+  $('threshold').value = n;
+  saveBrowserThreshold(n);
+  render();
+  status('已套用合併數量');
+};
 function meaningfulExclusions() { return exclusionDraft.map(value => value.trim()).filter(Boolean); }
 function focusExclusion(index) { $('exclusionRows').querySelector(`[data-index="${index}"]`)?.focus(); }
 function appendExclusionRow(index) {
@@ -118,7 +166,9 @@ function appendExclusionRow(index) {
   input.autocomplete = 'off'; input.spellcheck = false; input.placeholder = '例如 192.168.1.1';
   input.setAttribute('aria-label', `第 ${index + 1} 列排除 IP`);
   const removeCell = document.createElement('td'); const remove = document.createElement('button');
-  remove.type = 'button'; remove.textContent = '刪除'; remove.dataset.remove = String(index); remove.setAttribute('aria-label', `刪除第 ${index + 1} 列`);
+  remove.type = 'button'; remove.className = 'boss-action-icon boss-action-delete';
+  remove.innerHTML = deleteSvg; remove.dataset.remove = String(index);
+  remove.setAttribute('aria-label', `刪除第 ${index + 1} 列`); remove.title = '刪除';
   cell.append(input); removeCell.append(remove); row.append(number, cell, removeCell); $('exclusionRows').append(row);
 }
 function renderExclusions() {
@@ -162,7 +212,7 @@ $('exclusionRows').addEventListener('keydown', event => {
   else if (event.key === 'ArrowUp') { event.preventDefault(); focusExclusion(Math.max(index - 1, 0)); }
 });
 $('exclusionRows').addEventListener('click', event => {
-  const value = event.target.dataset.remove;
+  const value = (event.target.closest?.('button[data-remove]') || event.target).dataset.remove;
   if (value === undefined) return;
   const index = Number(value);
   if (!Number.isInteger(index) || index < 0 || index >= exclusionDraft.length) return;
@@ -215,8 +265,13 @@ document.addEventListener('pointerdown', event => {
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('columnMenu').hidden) closeColumnMenu(); });
 window.addEventListener('resize', closeColumnMenu);
 window.addEventListener('scroll', closeColumnMenu);
-$('blockRows').onclick = event => action(async () => { const ip = event.target.dataset.ip; if (ip && confirm(`確定刪除 ${ip}？`)) { await commit({ ...state, entries: state.entries.filter(e => e.ip !== ip) }); status('已刪除'); } });
-$('copyRules').onclick = () => copy([...new Set(rulesFor(state.entries, state.threshold).sort((a,b) => ipOrder(a.ip).localeCompare(ipOrder(b.ip))).map(e => e.rule))].join('\r\n'));
+$('blockRows').onclick = event => action(async () => {
+  const ip = (event.target.closest?.('button[data-ip]') || event.target).dataset.ip;
+  if (ip && confirm(`確定刪除 ${ip}？`)) {
+    await commit({ ...state, entries: state.entries.filter(e => e.ip !== ip) }); status('已刪除');
+  }
+});
+$('copyRules').onclick = () => copy([...new Set(rulesFor(state.entries, currentThreshold()).sort((a,b) => ipOrder(a.ip).localeCompare(ipOrder(b.ip))).map(e => e.rule))].join('\r\n'));
 $('events').onchange = event => fileAction(event.target, async file => { const started = revision; const text = await file.text(); if (started !== revision) throw new Error('清單已變更，請重新匯入'); const result = mergeEvents(state.entries, state.exclusions, text); await commit({ ...state, entries: result.entries }, started); counts = result.counts; render(); status(`已處理 ${result.count} 個不同 IP；略過 ${result.skipped} 個無效時間或 IP`); });
 
 async function start() {
@@ -226,6 +281,7 @@ async function start() {
     if (!response.ok) throw new Error(response.status === 403 ? '此帳號尚未開放使用 BOSS，請聯絡管理員。' : 'BOSS 權限服務暫時無法使用，請稍後再試。');
     const saved = await apiState();
     state = validateState(saved); revision = saved.revision;
+    preferredThreshold = readBrowserThreshold();
     if (!Number.isInteger(revision) || revision < 0) throw new Error('資料庫版本不正確');
     render(); $('accessGate').hidden = true; $('appShell').hidden = false;
   } catch (error) { $('accessMessage').textContent = error.message; }

@@ -22,7 +22,10 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   globalThis.document = { getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }, createElement: element, addEventListener() {} };
   globalThis.window = { frameElement: null, top: { indarAuth: { goToLogin() {} } }, innerWidth: 1024, innerHeight: 768, addEventListener() {} };
   let approve = true; globalThis.confirm = () => approve;
-  globalThis.localStorage = { getItem() { throw new Error('unexpected localStorage read') }, setItem() { throw new Error('unexpected localStorage write') }, removeItem() { throw new Error('unexpected localStorage removal') } };
+  const browserValues = new Map([['indar-boss-ip-threshold', '8']]);
+  globalThis.localStorage = { getItem(key) { return browserValues.get(key) ?? null; }, setItem(key, value) { browserValues.set(key, value); } };
+  let clipboardText = '';
+  globalThis.navigator = { clipboard: { writeText: async text => { clipboardText = text; } } };
   let shared = { entries: [{ ip: '4.4.4.4', time: '2025/1/1' }], exclusions: ['8.8.8.8'], threshold: 6, revision: 0 }, fail = false;
   globalThis.fetch = async (url, options = {}) => {
     if (url.endsWith('/api/access')) return { ok: true };
@@ -39,6 +42,17 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   const paste = (index, text) => { let prevented = false; $('exclusionRows').listeners.paste({ target: input(index), clipboardData: { getData: () => text }, preventDefault() { prevented = true; } }); return prevented; };
   const change = (id, text) => { const target = $(id); target.files = [{ text: async () => text }]; return target.onchange({ target }); };
   await import('../pages/ip/app.js?shared'); await new Promise(resolve => setImmediate(resolve));
+  assert.equal($('threshold').value, 8);
+  assert.equal($('exclusionSummary').textContent, '1');
+  $('threshold').value = '4.2'; $('threshold').onchange();
+  assert.equal($('threshold').value, 5);
+  $('setThreshold').onclick();
+  assert.equal(browserValues.get('indar-boss-ip-threshold'), '5');
+  assert.equal(shared.threshold, 6);
+  $('threshold').value = '255'; $('setThreshold').onclick();
+  assert.match($('blockStatus').textContent, /2～254/);
+  assert.equal(browserValues.get('indar-boss-ip-threshold'), '5');
+  $('threshold').value = 5;
   $('openExclusions').onclick(); assert.equal($('exclusionDialog').open, true);
   assert.equal(input(0).value, '8.8.8.8'); assert.equal(input(1).value, '');
   assert.equal(paste(1, ' 7.7.7.7\t1.2.3.4\r\n9.9.9.9\t\r\n'), true);
@@ -73,4 +87,9 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   $('columnSortDesc').onclick();
   assert.equal($('blockRows').children[0].children[0].textContent, '004.004.004.004');
   assert.equal($('columnMenu').hidden, true);
+  await $('copyRules').onclick();
+  assert.match(clipboardText, /DROP/);
+  assert.equal($('copyToast').hidden, false);
+  assert.equal($('copyToast').textContent, '已複製');
+  assert.doesNotMatch($('blockStatus').textContent, /已複製去重後的阻擋規則/);
 });
