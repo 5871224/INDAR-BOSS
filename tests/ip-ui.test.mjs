@@ -104,6 +104,6 @@ test('IP 欄位選單僅顯示必要操作，不顯示說明標題', async () =>
   const app = readFileSync(new URL('../pages/ip/app.js', import.meta.url), 'utf8');
   assert.doesNotMatch(html, /columnMenuTitle|搜尋／篩選|清除這欄的篩選|title="(?:IP|轉格式|更新時間)：排序與搜尋"/);
   assert.match(html, /<label for="columnSearch">搜尋<\/label>/);
-  assert.match(html, /id="columnFilterClear"[^>]*>清除蒐尋<\/button>/);
+  assert.match(html, /id="columnFilterClear"[^>]*>清除搜尋<\/button>/);
   assert.doesNotMatch(app, /columnMenuTitle/);
 });

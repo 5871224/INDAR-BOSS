@@ -21,7 +21,7 @@ let accessGranted=false;
 
 function showPage(){
   if(!accessGranted)return;
-  const ip=location.hash==='#ip';
+  const ip=location.hash!=='#soyal';
   soyalPage.hidden=ip;ipPage.hidden=!ip;
   document.body.classList.toggle('ip-active',ip);
   $('#soyalTab').setAttribute('aria-current',ip?'false':'page');

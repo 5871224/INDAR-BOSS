@@ -67,12 +67,22 @@ test('logged-out visitors use the shared login page and SOYAL stays closed', asy
   assert.equal(f.requests.filter(item => item.url === './api/access').length, 1)
 })
 
-test('the shared login page returns to SOYAL and permission is checked before opening', async () => {
+test('the shared login page defaults to IP inspection and checks permission before opening', async () => {
   const f = await fixture({ access: [200] })
   assert.equal(f.requests.filter(item => item.url === './api/access').length, 1)
   assert.equal(f.requests.filter(item => item.url.startsWith('./api/settings?')).length, 2)
   assert.equal(f.elements.get('appShell').hidden, false)
+  assert.equal(f.elements.get('ipPage').hidden, false)
+  assert.equal(f.elements.get('soyalPage').hidden, true)
+  assert.equal(f.elements.get('ipTab').attributes['aria-current'], 'page')
   assert.deepEqual(f.redirects, [])
+})
+
+test('explicit #soyal URL opens SOYAL without changing the default tab', async () => {
+  const f = await fixture({ access: [200], hash: '#soyal' })
+  assert.equal(f.elements.get('soyalPage').hidden, false)
+  assert.equal(f.elements.get('ipPage').hidden, true)
+  assert.equal(f.elements.get('soyalTab').attributes['aria-current'], 'page')
 })
 
 test('an authenticated employee without SOYAL permission remains locked out', async () => {
