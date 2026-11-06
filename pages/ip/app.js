@@ -53,7 +53,6 @@ function openColumnMenu(column) {
   if (!columns[column]) return;
   if (menuColumn === column && !$('columnMenu').hidden) { closeColumnMenu(); return; }
   menuColumn = column;
-  $('columnMenuTitle').textContent = columns[column] + '：排序與搜尋';
   $('columnSearch').value = columnFilters[column];
   $('columnSortAsc').textContent = column === 'time' ? '舊到新' : '升冪排序';
   $('columnSortDesc').textContent = column === 'time' ? '新到舊' : '降冪排序';

@@ -97,3 +97,13 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.equal($('copyToast').hidden, false);
   assert.doesNotMatch($('blockStatus').textContent, /已複製去重後的阻擋規則/);
 });
+
+test('IP 欄位選單僅顯示必要操作，不顯示說明標題', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../pages/ip/index.html', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../pages/ip/app.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(html, /columnMenuTitle|搜尋／篩選|清除這欄的篩選|title="(?:IP|轉格式|更新時間)：排序與搜尋"/);
+  assert.match(html, /<label for="columnSearch">搜尋<\/label>/);
+  assert.match(html, /id="columnFilterClear"[^>]*>清除蒐尋<\/button>/);
+  assert.doesNotMatch(app, /columnMenuTitle/);
+});
