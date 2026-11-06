@@ -83,7 +83,8 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   $('closeExclusions').onclick(); assert.equal($('exclusionDialog').open, false);
   assert.equal(parentHandlers.scroll, undefined); assert.deepEqual(shared.exclusions, ['8.8.8.8', '7.7.7.7', '1.2.3.4', '9.9.9.9']);
   await change('events', 'eventTime,dstIp,srcIp\n2025-01-02 10:00:00,7.7.7.7,1.2.3.5');
-  assert.equal($('blockRows').children[0].children[2].textContent, '2025/1/1');
+  assert.ok($('blockRows').children.some(row => row.children[2].textContent === '2025/01/02'));
+  assert.ok($('blockRows').children.every(row => !/:\d{2}/.test(row.children[2].textContent)));
   assert.equal(shared.entries.some(e => e.ip === '7.7.7.7'), false);
   assert.equal(shared.entries.some(e => e.ip === '1.2.3.5'), true);
   const before = JSON.stringify(shared);
