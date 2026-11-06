@@ -6,7 +6,7 @@ BOSS 包含 SOYAL 701Server / 701Client `.msg` 解析及 IP 檢查頁面。匯�
 
 ## 頁面結構
 
-`index.html` 是 BOSS 入口及 SOYAL 頁面，SOYAL 的程式與樣式放在 `pages/soyal/`；其他功能放在各自的 `pages/` 子目錄，從入口的分頁進入。新增靜態檔案時需同步更新 `scripts/install-soyal.sh` 的安裝清單。原有 `/soyal/` 入口與 `/soyal/api/` 保持不變。
+`index.html` 是 BOSS 入口及共用標頭，SOYAL 的程式與樣式放在 `pages/soyal/`；其他功能放在各自的 `pages/` 子目錄，從入口的分頁進入。切換分頁不會重新載入共用標頭或清除目前畫面，IP 頁首次開啟時才載入；舊 IP 網址會導向入口的 IP 分頁。新增靜態檔案時需同步更新 `scripts/install-soyal.sh` 的安裝清單。原有 `/soyal/` 入口與 `/soyal/api/` 保持不變。
 
 ## IP檢查
 
@@ -67,6 +67,8 @@ BOSS 不另外建立第二組使用者密碼：一般使用者沿用 INDAR 班�
 尚未登入時，BOSS 會導向 INDAR 共用登入頁 `/login.html`。登入成功返回後再次檢查 BOSS 權限；不在名單內的帳號無法進入。
 
 導向登入使用 INDAR 入口維護的 `/shared/auth-entry.js`；請先發布 INDAR 的共用登入頁及腳本，再發布本頁。
+
+標頭顯示 BOSS 權限 API 回傳的員工姓名與代碼；登出會結束共用 INDAR 登入工作階段。若畫面有尚未保存的資料，登出前會提示確認。
 
 若要把現有 Supabase 設定資料帶入新 database，先完成建庫、schema 與 `/etc/indar-soyal/database.env`，再執行：
 

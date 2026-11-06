@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>INDAR-BOSS｜IP檢查</title>
+  <script>if (window.top === window) location.replace('../../#ip');</script>
   <link rel="stylesheet" href="styles.css">
   <script src="/shared/auth-entry.js"></script>
 </head>
@@ -12,8 +13,6 @@
     <h1 id="accessTitle">BOSS</h1><p id="accessMessage" role="status">正在確認 BOSS 使用權限…</p><a href="/">返回首頁</a>
   </section>
   <main class="wrap" id="appShell" hidden>
-    <header><h1>INDAR-BOSS</h1><a class="home-link" href="/" aria-label="返回首頁" title="返回首頁">⌂</a></header>
-    <nav class="page-tabs" aria-label="功能頁面"><a href="../../">SOYAL</a><a href="./" aria-current="page">IP檢查</a></nav>
     <section class="card">
       <h2>名稱、MAC、IP 檢查</h2>
       <p>每行貼上一筆「名稱 MAC 192.168.1.IP -」；第一行以 <code>-A</code> 開頭時，改為檢查阻擋規則。</p>

@@ -16,6 +16,46 @@ let allRecords=[],allErrors=[],filesLoaded=0,loadSequence=0,duplicateCount=0;
 let sortKey='eventTime',sortDir='asc',currentPage=1;
 let doorSettings=[],userSettings=[],doorMap=new Map(),userMap=new Map();
 const recordKeys=new Set();
+const ipPage=$('#ipPage'),soyalPage=$('#soyalPage');
+let accessGranted=false;
+
+function showPage(){
+  if(!accessGranted)return;
+  const ip=location.hash==='#ip';
+  soyalPage.hidden=ip;ipPage.hidden=!ip;
+  $('#soyalTab').setAttribute('aria-current',ip?'false':'page');
+  $('#ipTab').setAttribute('aria-current',ip?'page':'false');
+  if(ip&&!ipPage.getAttribute('src'))ipPage.src='pages/ip/';
+}
+window.addEventListener('hashchange',showPage);
+ipPage.addEventListener('load',()=>{
+  const doc=ipPage.contentDocument;
+  if(!doc)return;
+  const update=()=>{
+    const bottom=Math.max(...['accessGate','appShell'].map(id=>{
+      const el=doc.getElementById(id);return el&&!el.hidden?el.getBoundingClientRect().bottom:0;
+    }));
+    if(bottom)ipPage.style.height=`${Math.ceil(bottom)+20}px`;
+  };
+  const observer=new ResizeObserver(update);
+  for(const id of ['accessGate','appShell']){const el=doc.getElementById(id);if(el)observer.observe(el);}
+  update();
+});
+$('#logoutBtn').addEventListener('click',async()=>{
+  const doc=ipPage.contentDocument;
+  const input=doc?.getElementById('checkInput')?.value.trim();
+  const exclusions=doc?.getElementById('exclusions')?.value;
+  let changed=false;
+  if(exclusions!==undefined){try{changed=exclusions!==(JSON.parse(localStorage.getItem('indar-boss-ip-v1')||'{}').exclusions||[]).join('\n');}catch{changed=true;}}
+  if((filesLoaded||input||changed)&&!confirm('目前有尚未保存的資料，登出後將清除畫面內容。確定登出？'))return;
+  const button=$('#logoutBtn');button.disabled=true;$('#headerMessage').textContent='';
+  try{
+    const response=await fetch('/sched/api/v1/auth/sign-out',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});
+    if(!response.ok&&response.status!==401){let data={};try{data=await response.json();}catch{}throw new Error(data.error?.message||data.error||'登出失敗，請稍後再試');}
+    window.indarAuth.goToLogin('/soyal/');
+  }catch(error){$('#headerMessage').textContent=error.message||'登出失敗，請稍後再試';}
+  finally{button.disabled=false;}
+});
 
 pickBtn.addEventListener('click',()=>fileInput.click());
 fileInput.addEventListener('change',e=>loadFiles([...e.target.files]));
@@ -46,11 +86,11 @@ checkAccess().catch(err=>showAccessError(err));
 async function checkAccess(){
   const response=await fetch('./api/access',{credentials:'same-origin',cache:'no-store'});
   let result={};try{result=await response.json();}catch{}
-  if(response.ok){await loadSettings();accessGate.hidden=true;appShell.hidden=false;return;}
+  if(response.ok){const user=result.user||{};$('#accountName').textContent=user.code?`${user.name||''}（${user.code}）`:user.name||'';accessGranted=true;showPage();accessGate.hidden=true;appShell.hidden=false;loadSettings().catch(error=>{if(error.status===401)showAccessError(error);else $('#headerMessage').textContent='SOYAL 設定讀取失敗，請重新整理或稍後再試。';});return;}
   const error=new Error(typeof result.error==='string'?result.error:(result.error?.message||'無法確認 BOSS 使用權限'));error.status=response.status;throw error;
 }
 function showAccessError(error){
-  if(error.status===401){window.indarAuth.goToLogin('/soyal/');return;}
+  if(error.status===401){window.indarAuth.goToLogin('/soyal/'+(location.hash==='#ip'?'#ip':''));return;}
   appShell.hidden=true;accessGate.hidden=false;
   accessMessage.textContent=error.status===403?'此帳號尚未開放使用 BOSS，請聯絡管理員。':error.status>=500?'BOSS 權限服務暫時無法使用，請稍後再試。':error.message;
   accessMessage.classList.add('error');

@@ -7,11 +7,11 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
 const script = readFileSync(new URL('../pages/soyal/app.js', import.meta.url), 'utf8').replace(/^import .*;\s*$/gm, '')
 const settle = () => new Promise(resolve => setImmediate(resolve))
 
-async function fixture({ access = [401] } = {}) {
-  const elements = new Map(), requests = [], redirects = []
+async function fixture({ access = [401], hash = '', signout = 200, settings = 200 } = {}) {
+  const elements = new Map(), requests = [], redirects = [], windowListeners = {}
   class Element {
     constructor(tag) {
-      this.tag = tag; this.hidden = false; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}
+      this.tag = tag; this.hidden = false; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.attributes = {}; this.style = {}
       const classes = new Set()
       this.classList = {
         add: name => classes.add(name), remove: name => classes.delete(name),
@@ -19,6 +19,8 @@ async function fixture({ access = [401] } = {}) {
       }
     }
     addEventListener(name, callback) { this.listeners[name] = callback }
+    setAttribute(name, value) { this.attributes[name] = value }
+    getAttribute(name) { return this.attributes[name] || null }
     close() { this.open = false }
     showModal() { this.open = true }
   }
@@ -30,6 +32,7 @@ async function fixture({ access = [401] } = {}) {
   // The real page hides the application until its access status is known.
   elements.get('appShell').hidden = true
   let accessIndex = 0
+  const location = { hash }
   vm.runInNewContext(script, {
     document: {
       querySelector(selector) { const element = elements.get(selector.slice(1)); assert.ok(element, selector); return element },
@@ -41,16 +44,18 @@ async function fixture({ access = [401] } = {}) {
       let status = 200, body = {}
       if (url === './api/access') {
         status = access[Math.min(accessIndex++, access.length - 1)]
-        body = status === 200 ? { allowed: true } : { error: status === 403 ? '尚未授權' : '請先登入' }
-      } else if (url.startsWith('./api/settings?type=')) body = { data: [] }
+        body = status === 200 ? { allowed: true, user: { name: '測試', code: '0001' } } : { error: status === 403 ? '尚未授權' : '請先登入' }
+      } else if (url.startsWith('./api/settings?type=')) { status = settings; body = { data: [], error: '設定失敗' } }
+      else if (url === '/sched/api/v1/auth/sign-out') { status = signout; body = { error: '登出失敗' } }
       else throw new Error(`unexpected request: ${url}`)
       return { ok: status === 200, status, json: async () => body }
     },
-    window: { indarAuth: { goToLogin: target => redirects.push(target) } }
+    location,
+    window: { addEventListener(name, callback) { windowListeners[name] = callback }, indarAuth: { goToLogin: target => redirects.push(target) } }
   })
   await settle()
   return {
-    elements, requests, redirects
+    elements, requests, redirects, location, windowListeners
   }
 }
 
@@ -81,4 +86,43 @@ test('an already authenticated and authorized visitor enters without signing in 
   const f = await fixture({ access: [200] })
   assert.equal(f.elements.get('appShell').hidden, false)
   assert.equal(f.requests.some(item => item.url.endsWith('/auth/sign-in')), false)
+})
+
+test('IP tab navigation keeps the shell and identity, and sign-out uses the shared session', async () => {
+  const f = await fixture({ access: [200], hash: '#ip' })
+  assert.equal(f.elements.get('accountName').textContent, '測試（0001）')
+  assert.equal(f.elements.get('soyalPage').hidden, true)
+  assert.equal(f.elements.get('ipPage').hidden, false)
+  f.location.hash = '#soyal'; f.windowListeners.hashchange()
+  assert.equal(f.elements.get('soyalPage').hidden, false)
+  assert.equal(f.elements.get('ipPage').hidden, true)
+  await f.elements.get('logoutBtn').listeners.click()
+  assert.equal(f.requests.at(-1).url, '/sched/api/v1/auth/sign-out')
+  assert.equal(f.requests.at(-1).options.method, 'POST')
+  assert.deepEqual(f.redirects, ['/soyal/'])
+})
+
+test('failed sign-out stays on the page and reports the error', async () => {
+  const f = await fixture({ access: [200], signout: 500 })
+  await f.elements.get('logoutBtn').listeners.click()
+  assert.deepEqual(f.redirects, [])
+  assert.equal(f.elements.get('headerMessage').textContent, '登出失敗')
+})
+
+test('an expired sign-out redirects to the shared login page', async () => {
+  const f = await fixture({ access: [200], signout: 401 })
+  await f.elements.get('logoutBtn').listeners.click()
+  assert.deepEqual(f.redirects, ['/soyal/'])
+})
+
+test('SOYAL settings failure does not block the IP page', async () => {
+  const f = await fixture({ access: [200], hash: '#ip', settings: 500 })
+  assert.equal(f.elements.get('appShell').hidden, false)
+  assert.equal(f.elements.get('ipPage').hidden, false)
+  assert.match(f.elements.get('headerMessage').textContent, /設定讀取失敗/)
+})
+
+test('an unauthenticated IP link returns to IP after login', async () => {
+  const f = await fixture({ hash: '#ip' })
+  assert.deepEqual(f.redirects, ['/soyal/#ip'])
 })

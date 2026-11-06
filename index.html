@@ -14,23 +14,18 @@
     <a class="primary access-login" href="/">返回首頁</a>
   </section>
   <main class="wrap" id="appShell" hidden>
-    <header>
-      <h1>INDAR-BOSS</h1>
-      <div class="header-actions">
-        <a class="home-link" href="/" aria-label="返回首頁" title="返回首頁">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-            <path d="m3 10 9-7 9 7" />
-            <path d="M5 9v11h14V9M9 20v-7h6v7" />
-          </svg>
-        </a>
-      </div>
+    <header class="header">
+      <div class="brand"><a class="brand-mark" href="/" aria-label="英達首頁">INDAR</a><span class="brand-name" aria-current="page">BOSS</span></div>
+      <div class="header-account"><strong id="accountName"></strong><button id="logoutBtn" type="button" class="logout-link">登出</button></div>
     </header>
+    <p id="headerMessage" class="header-message" role="status"></p>
 
     <nav class="page-tabs" aria-label="功能頁面">
-      <a href="./" aria-current="page">SOYAL</a>
-      <a href="pages/ip/">IP檢查</a>
+      <a id="soyalTab" href="#soyal" aria-current="page">SOYAL</a>
+      <a id="ipTab" href="#ip">IP檢查</a>
     </nav>
 
+    <div id="soyalPage">
     <div class="soyal-actions">
       <button id="doorSettingsBtn" type="button">門號設定</button>
       <button id="userSettingsBtn" type="button">使用者設定</button>
@@ -93,6 +88,8 @@
         </div>
       </div>
     </section>
+    </div>
+    <iframe id="ipPage" title="IP檢查" hidden></iframe>
   </main>
 
   <dialog id="detailDialog">
