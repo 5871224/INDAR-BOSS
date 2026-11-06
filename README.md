@@ -12,7 +12,7 @@ BOSS 包含 SOYAL 701Server / 701Client `.msg` 解析及 IP 檢查頁面。匯�
 
 `pages/ip/` 提供名稱、MAC、IP 與 `/32 DROP` 規則檢查，也可匯入包含 `eventTime`、`dstIp`、`srcIp` 欄位的事件 CSV，更新阻擋 IP，排除指定 IP，依合併數量產生 `/24` 規則，排序及複製去重結果。既有清單可由含 `IP`、`更新時間` 欄位的 UTF-8 CSV 匯入，選用 `排除IP` 欄位一併匯入排除名單，也可逐行貼上。合併後顯示同網段最新時間，但保留各 IP 原始時間；調高門檻後可恢復各筆時間。
 
-阻擋 IP、排除 IP 與合併數量儲存在獨立 `soyal` PostgreSQL 資料庫中，具有 BOSS 權限的使用者共用。排除清單以「設定排除清單」視窗編輯；同時修改時，版本檢查會拒絕覆蓋其他人的更新。既有瀏覽器資料不會自動覆寫共用清單，可使用「匯入此瀏覽器的舊資料」合併，或先下載舊資料備份。原 Excel 檔案及實際 IP 資料不放入儲存庫。
+阻擋 IP、排除 IP 與合併數量儲存在獨立 `soyal` PostgreSQL 資料庫中，具有 BOSS 權限的使用者共用。排除清單以「設定排除清單」視窗編輯；同時修改時，版本檢查會拒絕覆蓋其他人的更新。資料直接儲存在資料庫，不再使用瀏覽器本機清單。原 Excel 檔案及實際 IP 資料不放入儲存庫。
 
 ## 第一版功能
 - 拖放/選取一個或多個 `.msg`
@@ -48,7 +48,7 @@ node tests/parser.test.mjs /path/to/YYYYMMDD.msg
 
 ## 既有資料庫升級
 
-對已安裝的獨立 `soyal` 資料庫執行 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/ip-blocking.sql`，建立阻擋 IP、排除 IP 與版本設定資料表。此升級不刪除既有清單。完成後部署程式並重啟 `indar-soyal.service`；各瀏覽器的原有清單須由使用者自行選擇匯入。
+對已安裝的獨立 `soyal` 資料庫執行 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/ip-blocking.sql`，建立阻擋 IP、排除 IP 與版本設定資料表。此升級不刪除既有清單。完成後部署程式並重啟 `indar-soyal.service`。
 
 ## Ubuntu 部署
 

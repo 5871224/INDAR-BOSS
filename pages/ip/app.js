@@ -1,11 +1,10 @@
 import { checkLines, ipAddress, ipOrder, mergeEvents, parseCsv, rulesFor, timestamp } from './logic.js';
 
 const $ = id => document.getElementById(id);
-const storageKey = 'indar-boss-ip-v1';
-let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, checked = [], rawSaved = null, saving = false;
+let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, checked = [], saving = false;
 
 function validateState(input) {
-  if (!input || !Array.isArray(input.entries) || !Array.isArray(input.exclusions) || !Number.isInteger(input.threshold) || input.threshold < 2 || input.threshold > 254) throw new Error('備份格式有誤');
+  if (!input || !Array.isArray(input.entries) || !Array.isArray(input.exclusions) || !Number.isInteger(input.threshold) || input.threshold < 2 || input.threshold > 254) throw new Error('IP 清單格式有誤');
   const entries = new Map();
   for (const item of input.entries) {
     const ip = ipAddress(item?.ip); const time = String(item?.time || '').trim();
@@ -110,19 +109,6 @@ $('list').onchange = event => fileAction(event.target, async file => {
   }
   await commit({ ...state, entries: [...next.values()], exclusions: [...exclusions] }, started); status(`已匯入 ${rows.length} 行既有清單`);
 });
-function download(text, name) { const blob = new Blob([text], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
-$('backup').onclick = () => action(() => { download(JSON.stringify(state, null, 2), 'IP檢查備份.json'); status('已下載備份'); });
-$('downloadLocal').onclick = () => action(() => { if (rawSaved === null) throw new Error('沒有可下載的舊資料'); download(rawSaved, 'IP檢查本機舊資料.json'); });
-$('importLocal').onclick = () => action(async () => {
-  const old = validateState(JSON.parse(rawSaved)); const entries = new Map(state.entries.map(entry => [entry.ip, entry]));
-  for (const entry of old.entries) { const current = entries.get(entry.ip); if (!current || (entry.time && (!current.time || timestamp(entry.time) > timestamp(current.time)))) entries.set(entry.ip, entry); }
-  const exclusions = [...new Set([...state.exclusions, ...old.exclusions])];
-  if (!confirm(`將此瀏覽器的 ${old.entries.length} 筆 IP 和 ${old.exclusions.length} 個排除 IP 合併至共用清單，繼續？`)) return;
-  await commit({ ...state, entries: [...entries.values()], exclusions, threshold: revision === 0 ? old.threshold : state.threshold });
-  try { localStorage.setItem(storageKey + '-imported', rawSaved); } catch {}
-  $('importLocal').hidden = true; status('已合併此瀏覽器的舊資料');
-});
-$('restore').onchange = event => fileAction(event.target, async file => { const started = revision; const restored = validateState(JSON.parse(await file.text())); if (!confirm(`備份有 ${restored.entries.length} 筆 IP，還原將取代共用清單與設定。繼續？`)) return; await commit(restored, started); counts = null; render(); status('已還原備份'); });
 
 async function start() {
   try {
@@ -132,16 +118,6 @@ async function start() {
     const saved = await apiState();
     state = validateState(saved); revision = saved.revision;
     if (!Number.isInteger(revision) || revision < 0) throw new Error('資料庫版本不正確');
-    try {
-      rawSaved = localStorage.getItem(storageKey);
-      if (rawSaved !== null) {
-        $('downloadLocal').hidden = false;
-        if (localStorage.getItem(storageKey + '-imported') !== rawSaved) {
-          try { validateState(JSON.parse(rawSaved)); $('importLocal').hidden = false; }
-          catch { status('本機舊資料無法解析；可先下載舊資料備份。', true); }
-        }
-      }
-    } catch { status('無法讀取此瀏覽器的舊資料；資料庫清單仍可使用。', true); }
     render(); $('accessGate').hidden = true; $('appShell').hidden = false;
   } catch (error) { $('accessMessage').textContent = error.message; }
 }
