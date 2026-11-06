@@ -26,31 +26,107 @@ if (typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(syncPaginationHeight).observe(paginationBar);
 }
 window.addEventListener('resize', syncPaginationHeight);
-const ipPage=$('#ipPage'),soyalPage=$('#soyalPage');
+const ipPage=$('#ipPage'),ipHost=$('#ipHost'),ipStickyTrack=$('#ipStickyTrack'),ipStickyBar=$('#ipStickyBar'),soyalPage=$('#soyalPage');
 let accessGranted=false;
 
 function showPage(){
   if(!accessGranted)return;
   const ip=location.hash!=='#soyal';
-  soyalPage.hidden=ip;ipPage.hidden=!ip;
+  soyalPage.hidden=ip;ipHost.hidden=!ip;ipPage.hidden=!ip;
   document.body.classList.toggle('ip-active',ip);
   $('#soyalTab').setAttribute('aria-current',ip?'false':'page');
   $('#ipTab').setAttribute('aria-current',ip?'page':'false');
   if(ip&&!ipPage.getAttribute('src'))ipPage.src='pages/ip/';
-  if(ip) syncIpStickyHeader();
+  if(ip) syncIpHeader();else closeIpProxyMenu();
 }
 window.addEventListener('hashchange',showPage);
 
-// Sync the iframe viewport origin for native sticky positioning; no transform/animation.
-let ipResizeObserver = null;
-function syncIpStickyHeader() {
-  if (ipPage.hidden || !ipPage.contentDocument || !ipPage.getBoundingClientRect) return;
-  const offset = Math.max(0, -ipPage.getBoundingClientRect().top);
-  const root = ipPage.contentDocument.documentElement;
-  const value = offset + 'px';
-  if (root.style.getPropertyValue('--ip-sticky-top') !== value) {
-    root.style.setProperty('--ip-sticky-top', value);
+// The IP iframe cannot use the outer page as its native sticky scroll root.
+// Mirror only the header outside the iframe; no scroll-linked position updates.
+let ipResizeObserver = null, ipHeaderSignature = '', ipProxyMenu = null;
+function closeIpProxyMenu() {
+  if (ipProxyMenu) { ipProxyMenu.remove(); ipProxyMenu = null; }
+  const doc = ipPage.contentDocument;
+  const menu = doc?.getElementById('columnMenu');
+  if (menu) {
+    menu.style.visibility = '';
+    if (!menu.hidden) doc.dispatchEvent(new doc.defaultView.Event('pointerdown', { bubbles: true }));
   }
+}
+function openIpProxyMenu(button) {
+  const doc = ipPage.contentDocument;
+  if (!doc) return;
+  const sourceButton = doc.getElementById(button.id);
+  const sourceMenu = doc.getElementById('columnMenu');
+  if (!sourceButton || !sourceMenu) return;
+  const wasOpen = !sourceMenu.hidden && ipProxyMenu?.dataset.column === button.id;
+  closeIpProxyMenu();
+  if (wasOpen) return;
+  sourceButton.click();
+  if (sourceMenu.hidden) return;
+  sourceMenu.style.visibility = 'hidden';
+  const menu = document.importNode(sourceMenu, true);
+  menu.removeAttribute('style');
+  menu.className = 'ip-proxy-menu';
+  menu.id = 'ipProxyMenu';
+  menu.hidden = false;
+  menu.dataset.column = button.id;
+  const rect = button.getBoundingClientRect();
+  menu.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 284)) + 'px';
+  menu.style.top = Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - 214)) + 'px';
+  document.body.append(menu);
+  ipProxyMenu = menu;
+  const input = menu.querySelector('#columnSearch');
+  const sourceInput = doc.getElementById('columnSearch');
+  input.value = sourceInput.value;
+  input.addEventListener('input', () => {
+    sourceInput.value = input.value;
+    sourceInput.oninput({ target: sourceInput });
+    syncIpHeader();
+  });
+  for (const id of ['columnSortAsc', 'columnSortDesc', 'columnFilterClear']) {
+    menu.querySelector('#' + id)?.addEventListener('click', () => {
+      doc.getElementById(id).click();
+      if (id === 'columnFilterClear') { input.value = sourceInput.value; input.focus(); }
+      else closeIpProxyMenu();
+      syncIpHeader();
+    });
+  }
+  input.focus();
+}
+function syncIpHeader() {
+  if (ipPage.hidden || !ipPage.contentDocument) return;
+  const doc = ipPage.contentDocument;
+  const table = doc.querySelector('.table-wrap table');
+  const wrap = doc.querySelector('.table-wrap');
+  const head = table?.tHead;
+  if (!wrap || !head || !wrap.getBoundingClientRect().height) {
+    ipStickyTrack.hidden = true;
+    return;
+  }
+  const widths = Array.from(head.rows[0].cells, cell => cell.getBoundingClientRect().width);
+  const tableWidth = table.getBoundingClientRect().width;
+  const signature = head.innerHTML + '|' + widths.join(',') + '|' + tableWidth;
+  ipStickyTrack.style.top = Math.round(wrap.getBoundingClientRect().top + 1) + 'px';
+  ipStickyTrack.hidden = false;
+  if (signature === ipHeaderSignature) return;
+  ipHeaderSignature = signature;
+  const replica = document.createElement('table');
+  replica.style.width = tableWidth + 'px';
+  const cols = document.createElement('colgroup');
+  widths.forEach(width => {
+    const col = document.createElement('col');
+    col.style.width = width + 'px';
+    cols.append(col);
+  });
+  replica.append(cols, document.importNode(head, true));
+  ipStickyBar.replaceChildren(replica);
+  ipStickyBar.querySelectorAll('button[id]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (button.id.startsWith('columnTool-')) openIpProxyMenu(button);
+      else { doc.getElementById(button.id)?.click(); syncIpHeader(); }
+    });
+  });
 }
 function resizeIpFrame() {
   const doc = ipPage.contentDocument;
@@ -63,23 +139,27 @@ function resizeIpFrame() {
     const height = Math.ceil(bottom + 24);
     if (ipPage.style.height !== height + 'px') ipPage.style.height = height + 'px';
   }
-  syncIpStickyHeader();
+  syncIpHeader();
 }
 ipPage.addEventListener('load', () => {
   const doc = ipPage.contentDocument;
   if (!doc) return;
+  closeIpProxyMenu();
+  ipHeaderSignature = '';
   ipResizeObserver?.disconnect();
   if (typeof ResizeObserver !== 'undefined') {
     ipResizeObserver = new ResizeObserver(resizeIpFrame);
-    for (const id of ['accessGate', 'appShell']) {
-      const el = doc.getElementById(id);
+    for (const el of [doc.getElementById('accessGate'), doc.getElementById('appShell'), doc.querySelector('.table-wrap'), doc.getElementById('blockRows')]) {
       if (el) ipResizeObserver.observe(el);
     }
   }
   resizeIpFrame();
 });
-window.addEventListener('scroll', syncIpStickyHeader, {passive: true});
 window.addEventListener('resize', resizeIpFrame);
+window.addEventListener('scroll', closeIpProxyMenu, { passive: true });
+document.addEventListener('pointerdown', event => {
+  if (ipProxyMenu && !ipProxyMenu.contains(event.target) && !ipStickyBar.contains(event.target)) closeIpProxyMenu();
+});
 
 $('#logoutBtn').addEventListener('click',async()=>{
   const changed=Boolean(ipPage.contentWindow?.hasUnsavedExclusions?.());

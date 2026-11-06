@@ -144,8 +144,9 @@ test('IP 內容使用外層頁面捲動，且僅主表格表頭黏附外層視�
   assert.match(parentCss, /body\.ip-active\{height:auto;overflow-y:auto\}/)
   assert.match(parentCss, /body\.ip-active #ipPage\{display:block;width:100%;height:150px;overflow:hidden\}/)
   assert.doesNotMatch(parentCss, /body\.ip-active\{height:100dvh;overflow:hidden\}/)
-  assert.match(ipCss, /\.table-wrap th\{position:sticky;top:var\(--ip-sticky-top,0px\);transition:none;animation:none\}/)
-  assert.match(script, /window\.addEventListener\('scroll', syncIpStickyHeader, \{passive: true\}\)/)
+  assert.match(ipCss, /\.table-wrap th\{position:static;top:auto\}/)
+  assert.match(parentCss, /#ipStickyBar\{position:sticky;top:0;pointer-events:auto\}/)
+  assert.doesNotMatch(script, /syncIpStickyHeader|ip-sticky-top/)
   assert.match(script, /new ResizeObserver\(resizeIpFrame\)/)
 })
 
@@ -185,14 +186,17 @@ test('IP 與 SOYAL 表格表頭共用加深的藍灰色', () => {
   assert.match(soyalCss, /th\.sortable:hover\{background:#bed1e8\}/)
 })
 
-test('兩個主表格以原生 sticky 固定表頭，不使用 translate3d 動畫', () => {
+test('IP 表頭透過外層 CSS sticky 固定，不隨 scroll 動態移位', () => {
   const ipCss = readFileSync(new URL('../pages/ip/styles.css', import.meta.url), 'utf8')
-  const soyalCss = readFileSync(new URL('../pages/soyal/styles.css', import.meta.url), 'utf8')
-  assert.match(ipCss, /\.table-wrap th\{position:sticky;top:var\(--ip-sticky-top,0px\);transition:none;animation:none\}/)
-  assert.match(soyalCss, /th\{position:sticky;top:var\(--soyal-pagination-height,64px\)/)
-  assert.match(script, /root\.style\.setProperty\('--ip-sticky-top', value\)/)
-  assert.doesNotMatch(script, /translate3d|header\.style\.transform/)
-  assert.doesNotMatch(ipCss, /will-change:transform/)
+  const outerCss = readFileSync(new URL('../pages/soyal/styles.css', import.meta.url), 'utf8')
+  assert.match(html, /<div id="ipHost" hidden>[\s\S]*?<div id="ipStickyTrack" hidden><div id="ipStickyBar"><\/div>/)
+  assert.match(outerCss, /#ipStickyBar\{position:sticky;top:0;pointer-events:auto\}/)
+  assert.match(ipCss, /\.table-wrap th\{position:static;top:auto\}/)
+  assert.match(script, /window\.addEventListener\('scroll', closeIpProxyMenu, \{ passive: true \}\)/)
+  assert.match(script, /document\.importNode\(head, true\)/)
+  assert.match(script, /sourceInput\.oninput\(\{ target: sourceInput \}\)/)
+  assert.doesNotMatch(script, /translate3d|syncIpStickyHeader|ip-sticky-top/)
+  assert.doesNotMatch(ipCss, /will-change:transform|ip-sticky-top/)
 })
 
 test('SOYAL 將分頁控制列放表格上方，固定列動態量測高度', () => {
