@@ -30,11 +30,15 @@
       <div class="exclude"><button id="openExclusions" type="button">設定排除清單</button> <span id="exclusionSummary"></span><p id="excludeCounts" aria-live="polite"></p></div>
       <dialog id="exclusionDialog" aria-labelledby="exclusionTitle">
         <h3 id="exclusionTitle">設定排除清單</h3>
-        <p>每行輸入一個 IP；儲存後所有 BOSS 使用者共用。</p>
-        <label for="exclusions">排除 IP（每行一個）</label>
-        <textarea id="exclusions" rows="8" spellcheck="false"></textarea>
+        <p id="exclusionHelp">每格輸入一個 IP。可從 Excel 複製儲存格，貼到下方表格；儲存後所有 BOSS 使用者共用。</p>
+        <div class="exclusion-grid-wrap">
+          <table class="exclusion-grid" aria-label="排除 IP 清單" aria-describedby="exclusionHelp">
+            <thead><tr><th scope="col">序號</th><th scope="col">排除 IP</th><th scope="col">操作</th></tr></thead>
+            <tbody id="exclusionRows"></tbody>
+          </table>
+        </div>
         <p id="exclusionStatus" role="status" aria-live="polite"></p>
-        <div class="actions"><button id="saveExclusions" class="primary" type="button">儲存</button><button id="cancelExclusions" type="button">取消</button></div>
+        <div class="actions"><button id="addExclusion" type="button">新增一列</button><button id="saveExclusions" class="primary" type="button">儲存</button><button id="cancelExclusions" type="button">取消</button></div>
       </dialog>
       <div class="table-wrap"><table><thead><tr><th>IP</th><th>轉格式</th><th>更新時間</th><th>操作</th></tr></thead><tbody id="blockRows"></tbody></table></div>
     </section>

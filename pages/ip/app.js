@@ -1,7 +1,7 @@
-import { checkLines, ipAddress, ipOrder, mergeEvents, parseCsv, rulesFor, timestamp } from './logic.js';
+import { checkLines, ipAddress, ipOrder, mergeEvents, parseCsv, rulesFor, timestamp, exclusionPasteValues } from './logic.js';
 
 const $ = id => document.getElementById(id);
-let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, checked = [], saving = false;
+let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, checked = [], saving = false, exclusionDraft = [''];
 
 function validateState(input) {
   if (!input || !Array.isArray(input.entries) || !Array.isArray(input.exclusions) || !Number.isInteger(input.threshold) || input.threshold < 2 || input.threshold > 254) throw new Error('IP 清單格式有誤');
@@ -70,21 +70,84 @@ $('checkInput').oninput = () => { if (checked.length) { checked = []; showChecks
 $('clearCheck').onclick = () => { $('checkInput').value = ''; checked = []; showChecks(); $('checkStatus').textContent = ''; };
 $('copyChecked').onclick = () => copy(checked.map(r => r.output).filter(Boolean).join('\r\n'), $('checkStatus'));
 $('setThreshold').onclick = () => action(async () => { const threshold = Number($('threshold').value); await commit({ ...state, threshold }); status('已更新合併數量'); });
-window.hasUnsavedExclusions = () => $('exclusionDialog').open && $('exclusions').value !== state.exclusions.join('\n');
+function meaningfulExclusions() { return exclusionDraft.map(value => value.trim()).filter(Boolean); }
+function focusExclusion(index) { $('exclusionRows').querySelector(`[data-index="${index}"]`)?.focus(); }
+function appendExclusionRow(index) {
+  const row = document.createElement('tr');
+  const number = document.createElement('td'); number.textContent = String(index + 1);
+  const cell = document.createElement('td'); const input = document.createElement('input');
+  input.type = 'text'; input.value = exclusionDraft[index]; input.dataset.index = String(index);
+  input.autocomplete = 'off'; input.spellcheck = false; input.placeholder = '例如 192.168.1.1';
+  input.setAttribute('aria-label', `第 ${index + 1} 列排除 IP`);
+  const removeCell = document.createElement('td'); const remove = document.createElement('button');
+  remove.type = 'button'; remove.textContent = '刪除'; remove.dataset.remove = String(index); remove.setAttribute('aria-label', `刪除第 ${index + 1} 列`);
+  cell.append(input); removeCell.append(remove); row.append(number, cell, removeCell); $('exclusionRows').append(row);
+}
+function renderExclusions() {
+  $('exclusionRows').replaceChildren();
+  for (let i = 0; i < exclusionDraft.length; i++) appendExclusionRow(i);
+}
+function ensureBlankRow() {
+  if (exclusionDraft.at(-1)?.trim()) { exclusionDraft.push(''); appendExclusionRow(exclusionDraft.length - 1); }
+}
+window.hasUnsavedExclusions = () => $('exclusionDialog').open && meaningfulExclusions().join('\n') !== state.exclusions.join('\n');
 $('openExclusions').onclick = () => {
-  $('exclusions').value = state.exclusions.join('\n'); $('exclusionStatus').textContent = '';
+  exclusionDraft = [...state.exclusions, '']; renderExclusions(); $('exclusionStatus').textContent = '';
   const dialog = $('exclusionDialog');
   try {
     const frame = window.frameElement;
     if (frame) { dialog.style.position = 'absolute'; dialog.style.top = `${Math.max(12, -frame.getBoundingClientRect().top + 16)}px`; dialog.style.maxHeight = `${Math.max(200, window.parent.innerHeight - 32)}px`; }
   } catch {} // The same-origin BOSS page normally contains this frame.
-  dialog.showModal(); $('exclusions').focus();
+  dialog.showModal(); focusExclusion(exclusionDraft.length - 1);
 };
+$('exclusionRows').addEventListener('input', event => {
+  const index = Number(event.target.dataset.index);
+  if (!Number.isInteger(index) || index < 0 || index >= exclusionDraft.length) return;
+  exclusionDraft[index] = event.target.value; event.target.removeAttribute('aria-invalid'); ensureBlankRow();
+});
+$('exclusionRows').addEventListener('paste', event => {
+  const index = Number(event.target.dataset.index);
+  if (!Number.isInteger(index) || index < 0 || index >= exclusionDraft.length) return;
+  const text = event.clipboardData?.getData('text/plain') || '';
+  if (!/[\r\n\t]/.test(text)) return; // Ordinary single-cell editing remains native.
+  event.preventDefault();
+  const values = exclusionPasteValues(text);
+  if (!values.length) { $('exclusionStatus').textContent = '沒有可貼上的資料'; return; }
+  const next = [...exclusionDraft];
+  values.forEach((value, offset) => { next[index + offset] = value; });
+  if (next.filter(value => value.trim()).length > 20000) { $('exclusionStatus').textContent = '排除清單最多 20,000 個 IP'; return; }
+  const overwritten = values.some((value, offset) => exclusionDraft[index + offset]?.trim() && exclusionDraft[index + offset].trim() !== value);
+  if (overwritten && !confirm('貼上會取代所選列開始的既有內容，繼續嗎？')) return;
+  exclusionDraft = next;
+  if (exclusionDraft.at(-1)?.trim()) exclusionDraft.push('');
+  renderExclusions(); focusExclusion(index); $('exclusionStatus').textContent = `已貼上 ${values.length} 格，請確認後儲存`;
+});
+$('exclusionRows').addEventListener('keydown', event => {
+  const index = Number(event.target.dataset.index);
+  if (!Number.isInteger(index) || index < 0 || index >= exclusionDraft.length) return;
+  if (event.key === 'Enter' || event.key === 'ArrowDown') { event.preventDefault(); ensureBlankRow(); focusExclusion(Math.min(index + 1, exclusionDraft.length - 1)); }
+  else if (event.key === 'ArrowUp') { event.preventDefault(); focusExclusion(Math.max(index - 1, 0)); }
+});
+$('exclusionRows').addEventListener('click', event => {
+  const value = event.target.dataset.remove;
+  if (value === undefined) return;
+  const index = Number(value);
+  if (!Number.isInteger(index) || index < 0 || index >= exclusionDraft.length) return;
+  exclusionDraft.splice(index, 1); if (!exclusionDraft.length || exclusionDraft.at(-1).trim()) exclusionDraft.push('');
+  renderExclusions(); focusExclusion(Math.min(index, exclusionDraft.length - 1));
+});
+$('addExclusion').onclick = () => { exclusionDraft.push(''); appendExclusionRow(exclusionDraft.length - 1); focusExclusion(exclusionDraft.length - 1); };
 $('cancelExclusions').onclick = () => $('exclusionDialog').close();
 $('saveExclusions').onclick = async () => {
   try {
-    const raw = $('exclusions').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean); const exclusions = raw.map(ipAddress);
-    if (exclusions.some(ip => !ip)) throw new Error('排除清單包含無效 IP；請修正後再儲存');
+    const raw = meaningfulExclusions(); const exclusions = raw.map(ipAddress);
+    const invalid = exclusions.findIndex(ip => !ip);
+    if (invalid >= 0) {
+      const row = exclusionDraft.findIndex(value => value.trim() === raw[invalid]);
+      const input = $('exclusionRows').querySelector(`[data-index="${row}"]`);
+      input?.setAttribute('aria-invalid', 'true'); input?.focus();
+      throw new Error(`第 ${row + 1} 列 IP 格式有誤；請修正後再儲存`);
+    }
     $('exclusionStatus').textContent = '儲存中…';
     await commit({ ...state, exclusions: [...new Set(exclusions)] });
     $('exclusionDialog').close(); status('已儲存排除清單');

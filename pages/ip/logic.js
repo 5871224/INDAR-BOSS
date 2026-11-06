@@ -100,3 +100,8 @@ export function rulesFor(entries, threshold) {
     return { ...e, time, merged, rule: `-A ${merged ? prefix + '.0/24' : e.ip + '/32'} DROP` };
   });
 }
+
+// Spreadsheet copies use tabs between columns and newlines between rows.
+export function exclusionPasteValues(text) {
+  return String(text).split(/\r\n|\n|\r/).flatMap(row => row.split('\t')).map(value => value.trim()).filter(Boolean);
+}
