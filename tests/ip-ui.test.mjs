@@ -107,3 +107,13 @@ test('IP 欄位選單僅顯示必要操作，不顯示說明標題', async () =>
   assert.match(html, /id="columnFilterClear"[^>]*>清除搜尋<\/button>/);
   assert.doesNotMatch(app, /columnMenuTitle/);
 });
+
+test('IP 工具列使用連體合併控制和內嵌排除數量', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../pages/ip/index.html', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../pages/ip/styles.css', import.meta.url), 'utf8');
+  assert.match(html, /class="merge-control"[^>]*>[\s\S]*?id="setThreshold"[^>]*>套用合併數<\/button>[\s\S]*?id="threshold"/);
+  assert.match(html, /id="openExclusions"[^>]*>排除清單\s*<output id="exclusionSummary"/);
+  assert.doesNotMatch(html, /設定排除清單<\/button>|class="threshold-label"/);
+  assert.match(css, /\.merge-control button\{border-radius:10px 0 0 10px\}/);
+});

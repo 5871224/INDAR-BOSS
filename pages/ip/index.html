@@ -18,9 +18,11 @@
       <h2>檢查阻擋 IP</h2>
       <div class="ip-toolbar">
         <label class="file-button">匯入CSV<input id="events" type="file" accept=".csv,text/csv" hidden></label>
-        <label for="threshold" class="threshold-label">合併數量<input id="threshold" type="number" min="2" max="254" step="any" inputmode="decimal"></label>
-        <button id="setThreshold" type="button">套用</button>
-        <div class="exclude"><button id="openExclusions" type="button">設定排除清單</button><output id="exclusionSummary" class="exclusion-number" title="排除 IP 數量" aria-label="排除 IP 數量">0</output></div>
+        <div class="merge-control" role="group" aria-label="合併數量">
+          <button id="setThreshold" type="button">套用合併數</button>
+          <input id="threshold" type="number" min="2" max="254" step="any" inputmode="decimal" aria-label="合併數量">
+        </div>
+        <button id="openExclusions" class="exclude-button" type="button">排除清單 <output id="exclusionSummary" class="exclusion-number" aria-label="排除 IP 數量">0</output></button>
       </div>
       <p id="blockStatus" class="ip-status" role="status" aria-live="polite"></p>
       <p id="excludeCounts" class="ip-exclude-counts" aria-live="polite"></p>
