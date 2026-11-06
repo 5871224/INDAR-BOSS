@@ -8,7 +8,7 @@ const appShell=$('#appShell'),accessGate=$('#accessGate'),accessMessage=$('#acce
 const fileInput=$('#fileInput'),pickBtn=$('#pickBtn'),dropZone=$('#dropZone'),body=$('#resultBody');
 const toolbar=$('#toolbar'),resultSection=$('#resultSection'),tableWrap=$('#tableWrap');
 const searchBox=$('#searchBox'),doorFilter=$('#doorFilter'),addressFilter=$('#addressFilter'),codeFilter=$('#codeFilter');
-const paginationInfo=$('#paginationInfo'),pageStat=$('#pageStat');
+const paginationBar=$('#pagination'),paginationInfo=$('#paginationInfo'),pageStat=$('#pageStat');
 const firstPageBtn=$('#firstPageBtn'),prevPageBtn=$('#prevPageBtn'),nextPageBtn=$('#nextPageBtn'),lastPageBtn=$('#lastPageBtn');
 const dialog=$('#detailDialog'),hexGrid=$('#hexGrid'),detailSummary=$('#detailSummary');
 const doorSettingsDialog=$('#doorSettingsDialog'),userSettingsDialog=$('#userSettingsDialog');
@@ -16,6 +16,16 @@ let allRecords=[],allErrors=[],filesLoaded=0,loadSequence=0,duplicateCount=0;
 let sortKey='eventTime',sortDir='asc',currentPage=1;
 let doorSettings=[],userSettings=[],doorMap=new Map(),userMap=new Map();
 const recordKeys=new Set();
+
+// The pagination bar can wrap on narrow screens, so use its real height.
+function syncPaginationHeight() {
+  const measured = paginationBar.getBoundingClientRect?.().height || paginationBar.offsetHeight || 64;
+  resultSection.style.setProperty?.('--soyal-pagination-height', Math.ceil(measured) + 'px');
+}
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(syncPaginationHeight).observe(paginationBar);
+}
+window.addEventListener('resize', syncPaginationHeight);
 const ipPage=$('#ipPage'),soyalPage=$('#soyalPage');
 let accessGranted=false;
 
@@ -31,21 +41,16 @@ function showPage(){
 }
 window.addEventListener('hashchange',showPage);
 
-// Keep the IP header stationary without scroll-linked CSS top transitions.
+// Sync the iframe viewport origin for native sticky positioning; no transform/animation.
 let ipResizeObserver = null;
 function syncIpStickyHeader() {
   if (ipPage.hidden || !ipPage.contentDocument || !ipPage.getBoundingClientRect) return;
-  const doc = ipPage.contentDocument;
-  const table = doc.querySelector('.table-wrap table');
-  const header = table?.tHead;
-  if (!header) return;
-  const frameTop = ipPage.getBoundingClientRect().top;
-  const tableTop = table.getBoundingClientRect().top;
-  const headerHeight = header.getBoundingClientRect().height;
-  const maxTravel = Math.max(0, table.getBoundingClientRect().height - headerHeight);
-  const travel = Math.min(maxTravel, Math.max(0, -frameTop - tableTop));
-  const transform = travel ? `translate3d(0, ${Math.ceil(travel)}px, 0)` : '';
-  if (header.style.transform !== transform) header.style.transform = transform;
+  const offset = Math.max(0, -ipPage.getBoundingClientRect().top);
+  const root = ipPage.contentDocument.documentElement;
+  const value = offset + 'px';
+  if (root.style.getPropertyValue('--ip-sticky-top') !== value) {
+    root.style.setProperty('--ip-sticky-top', value);
+  }
 }
 function resizeIpFrame() {
   const doc = ipPage.contentDocument;
@@ -211,7 +216,7 @@ function getFiltered(){
 function goToPage(page){
   const totalPages=Number(lastPageBtn.dataset.lastPage)||1;
   const next=Math.min(Math.max(1,page),totalPages);if(next===currentPage)return;
-  currentPage=next;render();tableWrap.scrollIntoView?.({ block: 'start' });
+  currentPage=next;render();paginationBar.scrollIntoView?.({ block: 'start' });
 }
 
 function updatePagination(totalRecords,totalPages,startIndex,endIndex){
@@ -231,6 +236,7 @@ function render(){
   body.innerHTML=pageRecords.map((r,i)=>`<tr><td>${start+i+1}</td><td>${esc(r.eventTime)}</td><td>${r.door}</td><td>${esc(getDoorName(r))}</td><td>${formatUserCode(r.userAddress)}</td><td>${esc(getUserName(r))}</td><td><code>${r.functionLabel}</code></td><td>${esc(r.functionName)}</td><td>${esc(r.fileName)}</td><td><button data-key="${r.recordIndex}">HEX</button></td></tr>`).join('');
   body.querySelectorAll('button[data-key]').forEach(btn=>btn.addEventListener('click',()=>showDetail(allRecords[Number(btn.dataset.key)])));
   updatePagination(records.length,totalPages,start,end);
+  syncPaginationHeight();
 }
 
 function showDetail(r){

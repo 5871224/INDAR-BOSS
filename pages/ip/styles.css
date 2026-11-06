@@ -23,10 +23,9 @@ dialog{width:min(92%,580px);max-height:min(80vh,600px);overflow:auto;border:1px 
 
 .exclusion-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.exclusion-dialog-header h3{margin:0}.exclusion-dialog-close{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;background:transparent;color:#526079;flex:none}
 
-/* 主表頭直接隨外層頁面捲動位移，不使用黏附過渡動畫；對話框獨立捲動。 */
+/* 主表頭使用原生 sticky，與 SOYAL 相同；外層捲動值只用來校正 iframe 座標。 */
 .table-wrap table{border-collapse:separate;border-spacing:0}
-.table-wrap thead{position:relative;z-index:2;transition:none;animation:none;will-change:transform}
-.table-wrap th{position:static;top:auto}
+.table-wrap th{position:sticky;top:var(--ip-sticky-top,0px);transition:none;animation:none}
 .table-wrap th,.table-wrap td{border-bottom:1px solid #e8edf3}
 .th-inner{display:inline-flex;align-items:center;gap:7px;min-height:24px}
 .header-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:4px;border:0;border-radius:6px;background:transparent;color:#526079}
