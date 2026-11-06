@@ -42,6 +42,10 @@ npm test
 node tests/parser.test.mjs /path/to/YYYYMMDD.msg
 ```
 
+## 既有伺服器路徑切換
+
+原使用 `/srv/web/soyal` 的伺服器可由管理員使用 `sudo bash scripts/migrate-boss-path.sh /path/to/INDAR` 切換至 `/srv/web/boss`；參數應指向含 `/boss/` 路由設定及入口的 INDAR checkout。腳本只適用於記錄的既有檔案版本，遇到差異會停止；會備份、檢查 Nginx 與路由並在失敗時嘗試還原。切換後保留 `/srv/web/soyal` 相容連結，並嘗試觸發首頁自動部署。若伺服器已切換，無須再次執行。
+
 ## Ubuntu 部署
 
 建立獨立資料庫與角色（請由具備 PostgreSQL 管理權限的管理員執行）：
