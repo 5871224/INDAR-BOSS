@@ -173,3 +173,13 @@ test('SOYAL 主表格使用瀏覽器外層垂直捲軸，換頁返回表格頂�
   assert.match(script, /currentPage=next;render\(\);tableWrap\.scrollIntoView\?\.\(\{ block: 'start' \}\)/)
   assert.doesNotMatch(script, /tableWrap\.scrollTop=0/)
 })
+
+test('IP 與 SOYAL 表格表頭共用加深的藍灰色', () => {
+  const ipCss = readFileSync(new URL('../pages/ip/styles.css', import.meta.url), 'utf8')
+  const soyalCss = readFileSync(new URL('../pages/soyal/styles.css', import.meta.url), 'utf8')
+  for (const css of [ipCss, soyalCss]) {
+    assert.match(css, /th\{position:sticky;top:0;background:#d3e0f0;color:#233a57;/)
+    assert.match(css, /box-shadow:0 1px 0 #b7c9df/)
+  }
+  assert.match(soyalCss, /th\.sortable:hover\{background:#bed1e8\}/)
+})
