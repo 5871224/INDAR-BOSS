@@ -106,7 +106,7 @@ async function readIndarActor(request) {
   const actor = bundle.actor && typeof bundle.actor === 'object' ? bundle.actor : {}
   const profile = context.profile && typeof context.profile === 'object' ? context.profile : {}
   const id = String(actor.id || context.user?.id || '')
-  if (!id || !isActiveEmployee(profile)) throw new HttpError(403, 'ACCOUNT_INACTIVE', '此帳號目前無法使用 BOSS')
+  if (!id || !isActiveEmployee(profile)) throw new HttpError(403, 'ACCOUNT_INACTIVE', '此帳號目前無法使用 SOYAL')
   return {
     id,
     code: String(actor.employeeCode || profile.employee_code || ''),
@@ -118,7 +118,7 @@ async function readIndarActor(request) {
 async function requireSoyalAccess(request, pool) {
   const actor = await readIndarActor(request)
   const result = await pool.query('select 1 from public.soyal_access where employee_id = $1::uuid', [actor.id])
-  if (!result.rowCount) throw new HttpError(403, 'SOYAL_ACCESS_REQUIRED', '此帳號尚未開放使用 BOSS')
+  if (!result.rowCount) throw new HttpError(403, 'SOYAL_ACCESS_REQUIRED', '此帳號尚未開放使用 SOYAL')
   return actor
 }
 
@@ -177,9 +177,9 @@ function errorMessage(error) {
     BODY_TOO_LARGE: '請求內容過大',
     ID_INVALID: '資料 ID 不正確',
     AUTH_REQUIRED: '請先登入班表帳號',
-    SOYAL_ACCESS_REQUIRED: '此帳號尚未開放使用 BOSS',
+    SOYAL_ACCESS_REQUIRED: '此帳號尚未開放使用 SOYAL',
     SOYAL_ADMIN_REQUIRED: '需要班表系統管理權限',
-    ACCESS_LIST_INVALID: 'BOSS 權限名單不正確，請重新整理後再試',
+    ACCESS_LIST_INVALID: 'SOYAL 權限名單不正確，請重新整理後再試',
     SCHED_UNAVAILABLE: '班表系統暫時無法驗證登入',
     DIRECTORY_UNAVAILABLE: '無法讀取班表員工名單'
   })[error.message] || '設定 API 發生錯誤'
