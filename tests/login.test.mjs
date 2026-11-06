@@ -148,3 +148,10 @@ test('IP 內容使用外層頁面捲動，且僅主表格表頭黏附外層視�
   assert.match(script, /window\.addEventListener\('scroll', syncIpStickyHeader, \{passive: true\}\)/)
   assert.match(script, /new ResizeObserver\(resizeIpFrame\)/)
 })
+
+test('IP 與 SOYAL 共用一致的分頁上方間距', () => {
+  const css = readFileSync(new URL('../pages/soyal/styles.css', import.meta.url), 'utf8')
+  assert.match(css, /\.header\{background:#f4f7fb;margin:-28px -28px 8px;padding:28px 28px 10px\}/)
+  assert.match(css, /@media\(max-width:700px\)\{\.header\{margin:-14px -14px 8px;padding:14px 14px 8px\}\}/)
+  assert.doesNotMatch(css, /body\.ip-active \.header\{/)
+})
