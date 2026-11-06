@@ -52,7 +52,7 @@ $('#logoutBtn').addEventListener('click',async()=>{
   try{
     const response=await fetch('/sched/api/v1/auth/sign-out',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});
     if(!response.ok&&response.status!==401){let data={};try{data=await response.json();}catch{}throw new Error(data.error?.message||data.error||'登出失敗，請稍後再試');}
-    window.indarAuth.goToLogin('/soyal/');
+    window.indarAuth.goToLogin('/boss/');
   }catch(error){$('#headerMessage').textContent=error.message||'登出失敗，請稍後再試';}
   finally{button.disabled=false;}
 });
@@ -90,7 +90,7 @@ async function checkAccess(){
   const error=new Error(typeof result.error==='string'?result.error:(result.error?.message||'無法確認 BOSS 使用權限'));error.status=response.status;throw error;
 }
 function showAccessError(error){
-  if(error.status===401){window.indarAuth.goToLogin('/soyal/'+(location.hash==='#ip'?'#ip':''));return;}
+  if(error.status===401){window.indarAuth.goToLogin('/boss/'+(location.hash==='#ip'?'#ip':''));return;}
   appShell.hidden=true;accessGate.hidden=false;
   accessMessage.textContent=error.status===403?'此帳號尚未開放使用 BOSS，請聯絡管理員。':error.status>=500?'BOSS 權限服務暫時無法使用，請稍後再試。':error.message;
   accessMessage.classList.add('error');
