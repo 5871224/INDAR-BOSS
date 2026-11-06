@@ -164,3 +164,12 @@ test('SOYAL 標題同列與共用頁面寬度', () => {
   assert.match(stylesheet, /\.soyal-actions \.soyal-title\{[^}]*margin:0 auto 0 0\}/)
   assert.match(stylesheet, /#soyalPage\{width:100%;min-width:0\}/)
 })
+
+test('SOYAL 主表格使用瀏覽器外層垂直捲軸，換頁返回表格頂部', () => {
+  const css = readFileSync(new URL('../pages/soyal/styles.css', import.meta.url), 'utf8')
+  assert.match(css, /\.table-card\{padding:0;overflow:visible\}/)
+  assert.match(css, /\.table-wrap\{width:100%;max-height:none;overflow-x:auto;overflow-y:visible\}/)
+  assert.doesNotMatch(css, /\.table-wrap\{overflow:auto;max-height:68vh\}/)
+  assert.match(script, /currentPage=next;render\(\);tableWrap\.scrollIntoView\?\.\(\{ block: 'start' \}\)/)
+  assert.doesNotMatch(script, /tableWrap\.scrollTop=0/)
+})

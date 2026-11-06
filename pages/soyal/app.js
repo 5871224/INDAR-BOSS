@@ -202,7 +202,7 @@ function getFiltered(){
 function goToPage(page){
   const totalPages=Number(lastPageBtn.dataset.lastPage)||1;
   const next=Math.min(Math.max(1,page),totalPages);if(next===currentPage)return;
-  currentPage=next;render();tableWrap.scrollTop=0;
+  currentPage=next;render();tableWrap.scrollIntoView?.({ block: 'start' });
 }
 
 function updatePagination(totalRecords,totalPages,startIndex,endIndex){
