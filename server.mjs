@@ -1,6 +1,7 @@
 import http from 'node:http'
 import { fileURLToPath } from 'node:url'
 import { Pool } from 'pg'
+import { ipAddress, timestamp } from './pages/ip/logic.js'
 
 const DEFAULT_PORT = 3070
 const MAX_BODY_BYTES = 1024 * 1024
@@ -241,6 +242,53 @@ async function handleAccess(request, response, pool, { authorizeAccess, authoriz
   return sendJson(response, 200, { access: selected })
 }
 
+export function normalizeIpState(value) {
+  if (!value || !Array.isArray(value.entries) || !Array.isArray(value.exclusions) || value.entries.length > 20000 || value.exclusions.length > 20000 || !Number.isInteger(value.threshold) || value.threshold < 2 || value.threshold > 254 || !Number.isInteger(value.revision) || value.revision < 0 || value.revision >= 2147483647) throw new HttpError(400, 'IP_STATE_INVALID', 'IP 清單格式不正確')
+  const entries = value.entries.map(item => {
+    const ip = typeof item?.ip === 'string' ? ipAddress(item.ip) : null
+    const time = typeof item?.time === 'string' ? item.time.trim() : null
+    if (!ip || time === null || time.length > 64 || (time && !Number.isFinite(timestamp(time)))) throw new HttpError(400, 'IP_STATE_INVALID', 'IP 清單包含無效的 IP 或時間')
+    return { ip, time }
+  })
+  const exclusions = value.exclusions.map(ip => typeof ip === 'string' ? ipAddress(ip) : null)
+  if (exclusions.some(ip => !ip) || new Set(exclusions).size !== exclusions.length || new Set(entries.map(entry => entry.ip)).size !== entries.length) throw new HttpError(400, 'IP_STATE_INVALID', 'IP 清單包含無效或重複的 IP')
+  return { entries, exclusions, threshold: value.threshold, revision: value.revision }
+}
+
+async function handleIpState(request, response, pool, options) {
+  await options.authorize(request, pool)
+  if (request.method === 'GET') {
+    const result = await pool.query(`select threshold, revision,
+      coalesce((select json_agg(json_build_object('ip', host(ip), 'time', event_time) order by ip) from public.ip_block_entries), '[]'::json) as entries,
+      coalesce((select json_agg(host(ip) order by ip) from public.ip_exclusions), '[]'::json) as exclusions
+      from public.ip_block_state where id = true`)
+    if (!result.rows[0]) throw new Error('IP_STATE_MISSING')
+    return sendJson(response, 200, { data: result.rows[0] })
+  }
+  if (request.method !== 'PUT') {
+    response.setHeader('allow', 'GET, PUT')
+    return sendJson(response, 405, { error: '不支援的 HTTP 方法' })
+  }
+  const data = normalizeIpState(await readJson(request))
+  const client = await pool.connect()
+  try {
+    await client.query('begin')
+    const current = await client.query('select revision from public.ip_block_state where id = true for update')
+    if (!current.rowCount) throw new Error('IP_STATE_MISSING')
+    if (current.rows[0].revision !== data.revision) throw new HttpError(409, 'IP_STATE_CONFLICT', '清單已被其他使用者更新，請重新載入後再修改')
+    await client.query('delete from public.ip_block_entries')
+    await client.query('delete from public.ip_exclusions')
+    if (data.entries.length) await client.query(`insert into public.ip_block_entries (ip, event_time) select x.ip::inet, x.time from jsonb_to_recordset($1::jsonb) as x(ip text, time text)`, [JSON.stringify(data.entries)])
+    if (data.exclusions.length) await client.query('insert into public.ip_exclusions (ip) select unnest($1::text[])::inet', [data.exclusions])
+    const updated = await client.query('update public.ip_block_state set threshold = $1, revision = revision + 1, updated_at = now() where id = true returning revision', [data.threshold])
+    await client.query('commit')
+    return sendJson(response, 200, { data: { ...data, revision: updated.rows[0].revision } })
+  } catch (error) {
+    await client.query('rollback').catch(() => {})
+    throw error
+  } finally { client.release() }
+}
+
 async function handleSettings(request, response, pool, options) {
   const url = new URL(request.url || '/', 'http://127.0.0.1')
   if (url.pathname === '/health' && request.method === 'GET') {
@@ -248,6 +296,7 @@ async function handleSettings(request, response, pool, options) {
     return sendJson(response, 200, { ready: true })
   }
   if (url.pathname === '/api/access' || url.pathname === '/api/admin/access') return handleAccess(request, response, pool, options)
+  if (url.pathname === '/api/ip-state') return handleIpState(request, response, pool, options)
   if (url.pathname !== '/api/settings') return sendJson(response, 404, { error: '找不到 API' })
 
   await options.authorize(request, pool)

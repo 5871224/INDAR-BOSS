@@ -12,7 +12,7 @@ BOSS 包含 SOYAL 701Server / 701Client `.msg` 解析及 IP 檢查頁面。匯�
 
 `pages/ip/` 提供名稱、MAC、IP 與 `/32 DROP` 規則檢查，也可匯入包含 `eventTime`、`dstIp`、`srcIp` 欄位的事件 CSV，更新阻擋 IP，排除指定 IP，依合併數量產生 `/24` 規則，排序及複製去重結果。既有清單可由含 `IP`、`更新時間` 欄位的 UTF-8 CSV 匯入，選用 `排除IP` 欄位一併匯入排除名單，也可逐行貼上。合併後顯示同網段最新時間，但保留各 IP 原始時間；調高門檻後可恢復各筆時間。
 
-阻擋清單與設定儲存在目前瀏覽器的本機儲存空間，不會跨設備或瀏覽器同步。使用下載備份及還原備份轉移資料，清除瀏覽器資料前應先備份。原 Excel 檔案及實際 IP 資料不放入儲存庫。
+阻擋 IP、排除 IP 與合併數量儲存在獨立 `soyal` PostgreSQL 資料庫中，具有 BOSS 權限的使用者共用。排除清單以「設定排除清單」視窗編輯；同時修改時，版本檢查會拒絕覆蓋其他人的更新。既有瀏覽器資料不會自動覆寫共用清單，可使用「匯入此瀏覽器的舊資料」合併，或先下載舊資料備份。原 Excel 檔案及實際 IP 資料不放入儲存庫。
 
 ## 第一版功能
 - 拖放/選取一個或多個 `.msg`
@@ -46,6 +46,10 @@ node tests/parser.test.mjs /path/to/YYYYMMDD.msg
 
 原使用 `/srv/web/soyal` 的伺服器可由管理員使用 `sudo bash scripts/migrate-boss-path.sh /path/to/INDAR` 切換至 `/srv/web/boss`；參數應指向含 `/boss/` 路由設定及入口的 INDAR checkout。腳本只適用於記錄的既有檔案版本，遇到差異會停止；會備份、檢查 Nginx 與路由並在失敗時嘗試還原。切換後保留 `/srv/web/soyal` 相容連結，並嘗試觸發首頁自動部署。若伺服器已切換，無須再次執行。
 
+## 既有資料庫升級
+
+對已安裝的獨立 `soyal` 資料庫執行 `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/ip-blocking.sql`，建立阻擋 IP、排除 IP 與版本設定資料表。此升級不刪除既有清單。完成後部署程式並重啟 `indar-soyal.service`；各瀏覽器的原有清單須由使用者自行選擇匯入。
+
 ## Ubuntu 部署
 
 建立獨立資料庫與角色（請由具備 PostgreSQL 管理權限的管理員執行）：
@@ -64,7 +68,7 @@ postgresql://soyal_app:<password>@127.0.0.1:5432/soyal
 
 不要把包含密碼的連線字串放入 Git 或 `/srv/web/boss/`；systemd 的環境檔應放在 `/etc/indar-soyal/database.env`，權限設為 `0640`，由服務帳號可讀。
 
-安裝完成後由 Nginx 提供 `/boss/` 靜態頁面，並將 `/boss/api/` 反向代理到 `127.0.0.1:3070/api/`。`database/schema.sql` 只建立獨立 `soyal` database 內的 `door_settings`、`user_settings`、`soyal_access` 及必要權限，不會修改 INDAR 既有資料庫。
+安裝完成後由 Nginx 提供 `/boss/` 靜態頁面，並將 `/boss/api/` 反向代理到 `127.0.0.1:3070/api/`。`database/schema.sql` 建立獨立 `soyal` database 內的門號、使用者、權限與 IP 清單資料表及必要權限，不會修改 INDAR 既有資料庫。
 
 BOSS 不另外建立第二組使用者密碼：一般使用者沿用 INDAR 班表的 `indar_session` 登入狀態，但只有管理頁「權限設定 → BOSS」列出的在職員工可以進入。首頁對所有訪客顯示 BOSS 按鈕，進入時由 `/api/access` 檢查權限；直接輸入網址也不能繞過權限。具 `permission_settings` 的班表管理員可在 `/admin.html#permissions` 維護名單。
 

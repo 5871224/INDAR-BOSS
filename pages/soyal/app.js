@@ -44,9 +44,7 @@ ipPage.addEventListener('load',()=>{
 $('#logoutBtn').addEventListener('click',async()=>{
   const doc=ipPage.contentDocument;
   const input=doc?.getElementById('checkInput')?.value.trim();
-  const exclusions=doc?.getElementById('exclusions')?.value;
-  let changed=false;
-  if(exclusions!==undefined){try{changed=exclusions!==(JSON.parse(localStorage.getItem('indar-boss-ip-v1')||'{}').exclusions||[]).join('\n');}catch{changed=true;}}
+  const changed=Boolean(ipPage.contentWindow?.hasUnsavedExclusions?.());
   if((filesLoaded||input||changed)&&!confirm('目前有尚未保存的資料，登出後將清除畫面內容。確定登出？'))return;
   const button=$('#logoutBtn');button.disabled=true;$('#headerMessage').textContent='';
   try{
