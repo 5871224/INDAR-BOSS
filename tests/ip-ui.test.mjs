@@ -10,6 +10,8 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
     append(...items) { this.children.push(...items); }, replaceChildren(...items) { this.children = [...items]; },
     setAttribute(key, value) { this.attributes[key] = value; }, removeAttribute(key) { delete this.attributes[key]; },
     addEventListener(name, fn) { this.listeners[name] = fn; }, focus() { this.focused = true; },
+    getBoundingClientRect() { return { left: 40, bottom: 80 }; },
+    contains(node) { return this === node || this.children.some(child => child.contains?.(node)); },
     showModal() { this.open = true; }, close() { this.open = false; },
     querySelector(selector) {
       const index = selector.match(/^\[data-index="(\d+)"\]$/)?.[1];
@@ -17,8 +19,8 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
       return find(this);
     }
   });
-  globalThis.document = { getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }, createElement: element };
-  globalThis.window = { frameElement: null, top: { indarAuth: { goToLogin() {} } } };
+  globalThis.document = { getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }, createElement: element, addEventListener() {} };
+  globalThis.window = { frameElement: null, top: { indarAuth: { goToLogin() {} } }, innerWidth: 1024, innerHeight: 768, addEventListener() {} };
   let approve = true; globalThis.confirm = () => approve;
   globalThis.localStorage = { getItem() { throw new Error('unexpected localStorage read') }, setItem() { throw new Error('unexpected localStorage write') }, removeItem() { throw new Error('unexpected localStorage removal') } };
   let shared = { entries: [{ ip: '4.4.4.4', time: '2025/1/1' }], exclusions: ['8.8.8.8'], threshold: 6, revision: 0 }, fail = false;
@@ -60,4 +62,15 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   const before = JSON.stringify(shared);
   await change('events', 'IP,更新時間\nnot-ip,2025/1/2');
   assert.equal(JSON.stringify(shared), before);
+  $('columnTool-ip').onclick();
+  assert.equal($('columnMenu').hidden, false);
+  $('columnSearch').value = '4.4.';
+  $('columnSearch').oninput({ target: $('columnSearch') });
+  assert.equal($('blockRows').children.length, 1);
+  assert.equal($('blockRows').children[0].children[0].textContent, '004.004.004.004');
+  $('columnFilterClear').onclick();
+  assert.equal($('blockRows').children.length, 2);
+  $('columnSortDesc').onclick();
+  assert.equal($('blockRows').children[0].children[0].textContent, '004.004.004.004');
+  assert.equal($('columnMenu').hidden, true);
 });

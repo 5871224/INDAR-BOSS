@@ -2,6 +2,42 @@ import { ipAddress, ipOrder, mergeEvents, rulesFor, timestamp, exclusionPasteVal
 
 const $ = id => document.getElementById(id);
 let state = { entries: [], exclusions: [], threshold: 4 }, revision = 0, counts = null, saving = false, exclusionDraft = [''];
+const columns = { ip: 'IP', rule: '轉格式', time: '更新時間', action: '操作' };
+const columnFilters = { ip: '', rule: '', time: '', action: '' };
+let sortColumn = 'ip', sortDirection = 'asc', menuColumn = null;
+
+function columnText(row, column) {
+  if (column === 'ip') return row.ip + ' ' + ipOrder(row.ip);
+  if (column === 'rule') return row.rule;
+  if (column === 'time') return row.time || '';
+  return '刪除';
+}
+function compareRows(a, b, column) {
+  if (column === 'ip') return ipOrder(a.ip).localeCompare(ipOrder(b.ip));
+  if (column === 'time') return (timestamp(a.time) || 0) - (timestamp(b.time) || 0);
+  return columnText(a, column).localeCompare(columnText(b, column), 'zh-Hant');
+}
+function closeColumnMenu() {
+  $('columnMenu').hidden = true;
+  for (const column of Object.keys(columns)) $('columnTool-' + column).setAttribute('aria-expanded', 'false');
+  menuColumn = null;
+}
+function openColumnMenu(column) {
+  if (!columns[column]) return;
+  if (menuColumn === column && !$('columnMenu').hidden) { closeColumnMenu(); return; }
+  menuColumn = column;
+  $('columnMenuTitle').textContent = columns[column] + '：排序與搜尋';
+  $('columnSearch').value = columnFilters[column];
+  $('columnSortAsc').textContent = column === 'time' ? '舊到新' : '升冪排序';
+  $('columnSortDesc').textContent = column === 'time' ? '新到舊' : '降冪排序';
+  $('columnMenu').hidden = false;
+  for (const key of Object.keys(columns)) $('columnTool-' + key).setAttribute('aria-expanded', String(key === column));
+  const rect = $('columnTool-' + column).getBoundingClientRect();
+  $('columnMenu').style.left = Math.max(8, Math.min(rect.left, (window.innerWidth || 1024) - 284)) + 'px';
+  $('columnMenu').style.top = Math.max(8, Math.min(rect.bottom + 6, (window.innerHeight || 768) - 214)) + 'px';
+  $('columnSearch').focus();
+}
+
 
 function validateState(input) {
   if (!input || !Array.isArray(input.entries) || !Array.isArray(input.exclusions) || !Number.isInteger(input.threshold) || input.threshold < 2 || input.threshold > 254) throw new Error('IP 清單格式有誤');
@@ -46,16 +82,29 @@ function render() {
   $('exclusionSummary').textContent = `目前 ${state.exclusions.length} 個排除 IP`;
   $('excludeCounts').textContent = counts ? `本次匯入排除 IP 次數：${state.exclusions.map(ip => `${ip}：${counts[ip] || 0}`).join('、') || '無排除 IP'}` : '';
   let rows = rulesFor(state.entries, state.threshold);
-  rows.sort($('sort').value === 'time' ? (a, b) => (timestamp(b.time) || 0) - (timestamp(a.time) || 0) || ipOrder(a.ip).localeCompare(ipOrder(b.ip)) : (a, b) => ipOrder(a.ip).localeCompare(ipOrder(b.ip)));
+  rows = rows.filter(row => Object.keys(columns).every(column =>
+    columnText(row, column).toLowerCase().includes(columnFilters[column].toLowerCase())
+  ));
+  rows.sort((a, b) => {
+    const order = compareRows(a, b, sortColumn) * (sortDirection === 'asc' ? 1 : -1);
+    return order || ipOrder(a.ip).localeCompare(ipOrder(b.ip));
+  });
+  for (const column of Object.keys(columns)) {
+    $('columnHeader-' + column).setAttribute('aria-sort', sortColumn === column ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none');
+    $('columnTool-' + column).classList.toggle('is-active', sortColumn === column || Boolean(columnFilters[column]));
+  }
   $('blockRows').replaceChildren(...rows.map(row => {
     const tr = document.createElement('tr'); if (row.merged) tr.className = 'merged';
     for (const value of [ipOrder(row.ip), row.rule, row.time]) { const td = document.createElement('td'); td.textContent = value; tr.append(td); }
     const td = document.createElement('td'), button = document.createElement('button'); button.textContent = '刪除'; button.dataset.ip = row.ip; button.setAttribute('aria-label', `刪除 ${row.ip}`); td.append(button); tr.append(td); return tr;
   }));
 }
-async function copy(text, el) {
-  try { if (!text) throw new Error('沒有可複製的資料'); await navigator.clipboard.writeText(text); el.textContent = '已複製'; }
-  catch (error) { el.textContent = error.message || '複製失敗，請確認瀏覽器權限'; }
+async function copy(text) {
+  try {
+    if (!text) throw new Error('沒有可複製的資料');
+    await navigator.clipboard.writeText(text);
+    status('已複製去重後的阻擋規則');
+  } catch (error) { status(error.message || '複製失敗，請確認瀏覽器權限', true); }
 }
 
 $('setThreshold').onclick = () => action(async () => { const threshold = Number($('threshold').value); await commit({ ...state, threshold }); status('已更新合併數量'); });
@@ -82,12 +131,7 @@ function ensureBlankRow() {
 window.hasUnsavedExclusions = () => $('exclusionDialog').open && meaningfulExclusions().join('\n') !== state.exclusions.join('\n');
 $('openExclusions').onclick = () => {
   exclusionDraft = [...state.exclusions, '']; renderExclusions(); $('exclusionStatus').textContent = '';
-  const dialog = $('exclusionDialog');
-  try {
-    const frame = window.frameElement;
-    if (frame) { dialog.style.position = 'absolute'; dialog.style.top = `${Math.max(12, -frame.getBoundingClientRect().top + 16)}px`; dialog.style.maxHeight = `${Math.max(200, window.parent.innerHeight - 32)}px`; }
-  } catch {} // The same-origin BOSS page normally contains this frame.
-  dialog.showModal(); focusExclusion(exclusionDraft.length - 1);
+  $('exclusionDialog').showModal(); focusExclusion(exclusionDraft.length - 1);
 };
 $('exclusionRows').addEventListener('input', event => {
   const index = Number(event.target.dataset.index);
@@ -142,9 +186,37 @@ $('saveExclusions').onclick = async () => {
     $('exclusionDialog').close(); status('已儲存排除清單');
   } catch (error) { $('exclusionStatus').textContent = error.message || '儲存失敗，資料未變更'; }
 };
-$('sort').onchange = render;
+for (const column of Object.keys(columns)) $('columnTool-' + column).onclick = () => openColumnMenu(column);
+$('columnSortAsc').onclick = () => {
+  if (!menuColumn) return;
+  sortColumn = menuColumn; sortDirection = 'asc'; closeColumnMenu(); render();
+};
+$('columnSortDesc').onclick = () => {
+  if (!menuColumn) return;
+  sortColumn = menuColumn; sortDirection = 'desc'; closeColumnMenu(); render();
+};
+$('columnSearch').oninput = event => {
+  if (!menuColumn) return;
+  columnFilters[menuColumn] = event.target.value.trim();
+  render();
+};
+$('columnFilterClear').onclick = () => {
+  if (!menuColumn) return;
+  columnFilters[menuColumn] = '';
+  $('columnSearch').value = '';
+  render(); $('columnSearch').focus();
+};
+document.addEventListener('pointerdown', event => {
+  if ($('columnMenu').hidden) return;
+  if ($('columnMenu').contains(event.target)) return;
+  if (Object.keys(columns).some(column => $('columnTool-' + column).contains(event.target))) return;
+  closeColumnMenu();
+});
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('columnMenu').hidden) closeColumnMenu(); });
+window.addEventListener('resize', closeColumnMenu);
+window.addEventListener('scroll', closeColumnMenu);
 $('blockRows').onclick = event => action(async () => { const ip = event.target.dataset.ip; if (ip && confirm(`確定刪除 ${ip}？`)) { await commit({ ...state, entries: state.entries.filter(e => e.ip !== ip) }); status('已刪除'); } });
-$('copyRules').onclick = () => copy([...new Set(rulesFor(state.entries, state.threshold).sort((a,b) => ipOrder(a.ip).localeCompare(ipOrder(b.ip))).map(e => e.rule))].join('\r\n'), $('blockStatus'));
+$('copyRules').onclick = () => copy([...new Set(rulesFor(state.entries, state.threshold).sort((a,b) => ipOrder(a.ip).localeCompare(ipOrder(b.ip))).map(e => e.rule))].join('\r\n'));
 $('events').onchange = event => fileAction(event.target, async file => { const started = revision; const text = await file.text(); if (started !== revision) throw new Error('清單已變更，請重新匯入'); const result = mergeEvents(state.entries, state.exclusions, text); await commit({ ...state, entries: result.entries }, started); counts = result.counts; render(); status(`已處理 ${result.count} 個不同 IP；略過 ${result.skipped} 個無效時間或 IP`); });
 
 async function start() {

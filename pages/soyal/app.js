@@ -23,24 +23,12 @@ function showPage(){
   if(!accessGranted)return;
   const ip=location.hash==='#ip';
   soyalPage.hidden=ip;ipPage.hidden=!ip;
+  document.body.classList.toggle('ip-active',ip);
   $('#soyalTab').setAttribute('aria-current',ip?'false':'page');
   $('#ipTab').setAttribute('aria-current',ip?'page':'false');
   if(ip&&!ipPage.getAttribute('src'))ipPage.src='pages/ip/';
 }
 window.addEventListener('hashchange',showPage);
-ipPage.addEventListener('load',()=>{
-  const doc=ipPage.contentDocument;
-  if(!doc)return;
-  const update=()=>{
-    const bottom=Math.max(...['accessGate','appShell'].map(id=>{
-      const el=doc.getElementById(id);return el&&!el.hidden?el.getBoundingClientRect().bottom:0;
-    }));
-    if(bottom)ipPage.style.height=`${Math.ceil(bottom)+20}px`;
-  };
-  const observer=new ResizeObserver(update);
-  for(const id of ['accessGate','appShell']){const el=doc.getElementById(id);if(el)observer.observe(el);}
-  update();
-});
 $('#logoutBtn').addEventListener('click',async()=>{
   const changed=Boolean(ipPage.contentWindow?.hasUnsavedExclusions?.());
   if((filesLoaded||changed)&&!confirm('目前有尚未保存的資料，登出後將清除畫面內容。確定登出？'))return;
