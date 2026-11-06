@@ -156,3 +156,13 @@ test('IP 工具列使用連體合併控制和內嵌排除數量', async () => {
   assert.doesNotMatch(html, /設定排除清單<\/button>|class="threshold-label"/);
   assert.match(css, /\.merge-control button\{border-radius:10px 0 0 10px\}/);
 });
+
+test('IP 操作按鈕和標題同一行，操作列靠右排列', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../pages/ip/index.html', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../pages/ip/styles.css', import.meta.url), 'utf8');
+  assert.match(html, /<div class="ip-heading">\s*<h2>檢查阻擋 IP<\/h2>\s*<div class="ip-toolbar">/);
+  assert.match(css, /\.ip-heading\{display:flex;align-items:center;justify-content:space-between/);
+  assert.match(css, /\.ip-toolbar\{display:flex;align-items:center;justify-content:flex-end/);
+  assert.match(css, /@media\(max-width:620px\)\{\.ip-heading\{align-items:flex-start/);
+});
