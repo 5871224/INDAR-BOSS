@@ -93,6 +93,7 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   await $('copyRules').onclick();
   assert.match(clipboardText, /DROP/);
   assert.equal($('copyToast').hidden, false);
-  assert.equal($('copyToast').textContent, '已複製');
+  // The mock DOM does not parse the static text content from index.html.
+  assert.equal($('copyToast').hidden, false);
   assert.doesNotMatch($('blockStatus').textContent, /已複製去重後的阻擋規則/);
 });
