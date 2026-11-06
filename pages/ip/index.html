@@ -24,7 +24,7 @@
     <section class="card">
       <h2>檢查阻擋 IP</h2>
       <p>匯入事件 CSV（需有 eventTime、dstIp、srcIp 欄位）。相同 IP 取最新時間，排除清單中的 IP 不會加入阻擋清單。</p>
-      <div class="actions"><label class="file-button">匯入事件 CSV<input id="events" type="file" accept=".csv,text/csv" hidden></label><label class="file-button">匯入既有清單 CSV<input id="list" type="file" accept=".csv,text/csv" hidden></label><button id="backup">下載備份</button><button id="importLocal" hidden>匯入此瀏覽器的舊資料</button><button id="downloadLocal" hidden>下載舊資料</button><label class="file-button">還原備份<input id="restore" type="file" accept=".json,application/json" hidden></label></div>
+      <div class="actions"><label class="file-button">匯入事件 CSV<input id="events" type="file" accept=".csv,text/csv" hidden></label><label class="file-button">匯入既有清單 CSV<input id="list" type="file" accept=".csv,text/csv" hidden></label></div>
       <p class="note">既有清單 CSV 欄位：IP、更新時間（可包含轉格式）；由 Excel 另存為 UTF-8 CSV。阻擋 IP 與排除清單儲存在資料庫，具 BOSS 權限的使用者共用。</p>
       <div class="controls"><label>合併數量（2–254）<input id="threshold" type="number" min="2" max="254" step="1"></label><button id="setThreshold">套用</button><label>排序<select id="sort"><option value="ip">IP</option><option value="time">更新時間（新到舊）</option></select></label><button id="copyRules">複製去重後的阻擋規則</button><span id="blockStatus" role="status"></span></div>
       <div class="exclude"><button id="openExclusions" type="button">設定排除清單</button> <span id="exclusionSummary"></span><p id="excludeCounts" aria-live="polite"></p></div>
