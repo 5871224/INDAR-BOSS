@@ -25,7 +25,10 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   const browserValues = new Map([['indar-boss-ip-threshold', '8']]);
   globalThis.localStorage = { getItem(key) { return browserValues.get(key) ?? null; }, setItem(key, value) { browserValues.set(key, value); } };
   let clipboardText = '';
-  globalThis.navigator = { clipboard: { writeText: async text => { clipboardText = text; } } };
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: { clipboard: { writeText: async text => { clipboardText = text; } } }
+  });
   let shared = { entries: [{ ip: '4.4.4.4', time: '2025/1/1' }], exclusions: ['8.8.8.8'], threshold: 6, revision: 0 }, fail = false;
   globalThis.fetch = async (url, options = {}) => {
     if (url.endsWith('/api/access')) return { ok: true };
