@@ -104,3 +104,7 @@ sudo bash /home/indar/deploy/INDAR/scripts/install-intranet.sh
 ### 自動部署
 
 推送至 `main` 後，GitHub Actions 先執行檢查與測試，通過後由此專案專用的 `indar-boss` self-hosted runner 部署至內網主機。也可從 Actions 手動執行流程；只有 `main` 可以部署。部署腳本會檢查版本、服務與網站，失敗時還原上一版本。Runner 由主機上的使用者服務 `github-runner-indar-boss.service` 持續執行。
+
+
+### 主站獨立管理權限（2026-11-09）
+BOSS `/api/admin/access` 僅允許具有英達主站獨立管理權限者操作，透過班表後端 `GET /api/v1/management/context` 驗證；管理員工清單透過 `GET /api/v1/management/access` 取得，不再依賴班表的 `permission_settings` 或「成員設定」權限。一般使用 BOSS 的 `soyal_access` 名單仍維持獨立管理。

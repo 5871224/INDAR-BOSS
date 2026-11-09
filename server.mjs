@@ -100,19 +100,14 @@ async function callSched(path, request, body) {
 }
 
 async function readIndarActor(request) {
-  const [context, bundle] = await Promise.all([
-    callSched('auth/context', request),
-    callSched('access/bundle', request)
-  ])
-  const actor = bundle.actor && typeof bundle.actor === 'object' ? bundle.actor : {}
+  const context = await callSched('auth/context', request)
   const profile = context.profile && typeof context.profile === 'object' ? context.profile : {}
-  const id = String(actor.id || context.user?.id || '')
+  const id = String(context.user?.id || '')
   if (!id || !isActiveEmployee(profile)) throw new HttpError(403, 'ACCOUNT_INACTIVE', '此帳號目前無法使用 SOYAL')
   return {
     id,
-    code: String(actor.employeeCode || profile.employee_code || ''),
-    name: String(actor.fullName || profile.full_name || ''),
-    permissions: Array.isArray(actor.permissions) ? actor.permissions : []
+    code: String(profile.employee_code || ''),
+    name: String(profile.full_name || '')
   }
 }
 
@@ -125,19 +120,20 @@ async function requireSoyalAccess(request, pool) {
 
 async function requireSoyalAdmin(request) {
   const actor = await readIndarActor(request)
-  if (!actor.permissions.includes('permission_settings')) {
-    throw new HttpError(403, 'SOYAL_ADMIN_REQUIRED', '需要班表系統管理權限')
+  const management = await callSched('management/context', request)
+  if (management?.allowed !== true) {
+    throw new HttpError(403, 'SOYAL_ADMIN_REQUIRED', '需要英達主站的獨立管理權限')
   }
   return actor
 }
 
 async function readEmployeeDirectory(request) {
-  const rows = await callSched('members', request, { action: 'get_employee_admin_directory_v3' })
-  if (!Array.isArray(rows)) throw new HttpError(503, 'DIRECTORY_UNAVAILABLE', '無法讀取班表員工名單')
-  return rows.filter(isActiveEmployee).map(row => ({
+  const result = await callSched('management/access', request)
+  if (!Array.isArray(result?.employees)) throw new HttpError(503, 'DIRECTORY_UNAVAILABLE', '無法讀取英達管理員工名單')
+  return result.employees.map(row => ({
     id: String(row.id),
-    code: String(row.employee_code || ''),
-    name: String(row.full_name || '')
+    code: String(row.code || ''),
+    name: String(row.name || '')
   })).filter(row => UUID_PATTERN.test(row.id) && row.code && row.name)
 }
 
@@ -179,7 +175,7 @@ function errorMessage(error) {
     ID_INVALID: '資料 ID 不正確',
     AUTH_REQUIRED: '請先登入班表帳號',
     SOYAL_ACCESS_REQUIRED: '此帳號尚未開放使用 SOYAL',
-    SOYAL_ADMIN_REQUIRED: '需要班表系統管理權限',
+    SOYAL_ADMIN_REQUIRED: '需要英達主站的獨立管理權限',
     ACCESS_LIST_INVALID: 'SOYAL 權限名單不正確，請重新整理後再試',
     SCHED_UNAVAILABLE: '班表系統暫時無法驗證登入',
     DIRECTORY_UNAVAILABLE: '無法讀取班表員工名單'
@@ -203,7 +199,7 @@ async function handleAccess(request, response, pool, { authorizeAccess, authoriz
     let employees = []
     let directoryError = ''
     try { employees = await directory(request) } catch (error) {
-      if (error.statusCode === 403) directoryError = '此帳號沒有班表「成員設定」權限，無法讀取員工名單'
+      if (error.statusCode === 403) directoryError = '此帳號沒有英達主站管理權限，無法讀取員工名單'
       else throw error
     }
     return sendJson(response, 200, { access: result.rows, employees, directoryError })
