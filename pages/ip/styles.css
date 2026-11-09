@@ -38,5 +38,3 @@ dialog{width:min(92%,580px);max-height:min(80vh,600px);overflow:auto;border:1px 
 .column-menu input{width:100%;min-width:0;margin-bottom:10px}
 .column-menu .column-filter-clear{width:100%;padding:7px 10px}
 @media(max-width:700px){.table-wrap th,.table-wrap td{padding:8px 7px}.th-inner{gap:3px}.header-icon{width:26px;height:26px}}
-
-.copy-toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1000;padding:14px 24px;background:#172033;color:#fff;border-radius:12px;box-shadow:0 14px 40px rgba(18,33,55,.25);font-size:17px;font-weight:650;pointer-events:none}

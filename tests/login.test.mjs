@@ -35,12 +35,16 @@ async function fixture({ access = [401], hash = '', settings = 200, approve = tr
   const location = { hash }
   let accountMenu
   const confirmations = []
+  const timers = new Map()
+  let nextTimer = 0
   vm.runInNewContext(script, {
     createAccountMenu(options) {
       accountMenu = { options, user: null, setUser(user) { this.user = user } }
       return accountMenu
     },
     confirm(message) { confirmations.push(message); return approve },
+    setTimeout(callback, delay) { const id = ++nextTimer; timers.set(id, { callback, delay }); return id },
+    clearTimeout(id) { timers.delete(id) },
     document: {
       body: new Element('body'),
       addEventListener() {},
@@ -63,7 +67,7 @@ async function fixture({ access = [401], hash = '', settings = 200, approve = tr
   })
   await settle()
   return {
-    elements, requests, redirects, location, windowListeners, accountMenu, confirmations
+    elements, requests, redirects, location, windowListeners, accountMenu, confirmations, timers
   }
 }
 
@@ -117,6 +121,33 @@ test('IP and SOYAL retain identity and logout returns to the active tab', async 
   assert.equal(f.accountMenu.options.beforeSignOut(), true)
   await f.accountMenu.options.onSignedOut()
   assert.deepEqual(f.redirects, ['/boss/#soyal'])
+})
+
+test('successful IP copies show a timed outer-page confirmation and dismiss it when leaving IP', async () => {
+  const f = await fixture({ access: [200], hash: '#ip' })
+  const listeners = {}
+  f.elements.get('ipPage').contentDocument = {
+    addEventListener(name, callback) { listeners[name] = callback },
+    getElementById() { return null },
+    querySelector() { return null }
+  }
+  f.elements.get('ipPage').listeners.load()
+  const toast = f.elements.get('ipCopyToast')
+  assert.equal(toast.hidden, true)
+  listeners['ip-copy-success']()
+  assert.equal(toast.hidden, false)
+  assert.equal([...f.timers.values()][0].delay, 2400)
+  listeners['ip-copy-success']()
+  assert.equal(f.timers.size, 1)
+  const timer = [...f.timers.values()][0]
+  timer.callback()
+  assert.equal(toast.hidden, true)
+  listeners['ip-copy-success']()
+  f.location.hash = '#soyal'; f.windowListeners.hashchange()
+  assert.equal(toast.hidden, true)
+  assert.equal(f.timers.size, 0)
+  listeners['ip-copy-success']()
+  assert.equal(toast.hidden, true)
 })
 
 test('cancelled logout preserves unsaved IP exclusions', async () => {

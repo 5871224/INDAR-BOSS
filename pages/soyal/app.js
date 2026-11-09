@@ -29,11 +29,25 @@ if (typeof ResizeObserver !== 'undefined') {
 window.addEventListener('resize', syncPaginationHeight);
 const ipPage=$('#ipPage'),ipHost=$('#ipHost'),ipStickyTrack=$('#ipStickyTrack'),ipStickyBar=$('#ipStickyBar'),soyalPage=$('#soyalPage');
 let accessGranted=false;
+let ipCopyToastTimer=null;
+
+function hideIpCopyToast(){
+  clearTimeout(ipCopyToastTimer);
+  ipCopyToastTimer=null;
+  $('#ipCopyToast').hidden=true;
+}
+function showIpCopyToast(){
+  if(ipPage.hidden||appShell.hidden)return;
+  clearTimeout(ipCopyToastTimer);
+  $('#ipCopyToast').hidden=false;
+  ipCopyToastTimer=setTimeout(hideIpCopyToast,2400);
+}
 
 function showPage(){
   if(!accessGranted)return;
   const ip=location.hash!=='#soyal';
   soyalPage.hidden=ip;ipHost.hidden=!ip;ipPage.hidden=!ip;
+  if(!ip)hideIpCopyToast();
   document.body.classList.toggle('ip-active',ip);
   $('#soyalTab').setAttribute('aria-current',ip?'false':'page');
   $('#ipTab').setAttribute('aria-current',ip?'page':'false');
@@ -158,6 +172,7 @@ ipPage.addEventListener('load', () => {
   const doc = ipPage.contentDocument;
   if (!doc) return;
   doc.addEventListener('ip-dialog-change', syncIpHeader);
+  doc.addEventListener('ip-copy-success', showIpCopyToast);
   closeIpProxyMenu();
   ipHeaderSignature = '';
   ipResizeObserver?.disconnect();

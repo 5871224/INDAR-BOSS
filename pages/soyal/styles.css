@@ -12,6 +12,7 @@
 #ipPage{display:block;width:100%;height:150px;border:0}
 #ipStickyTrack{position:absolute;left:1px;right:1px;bottom:0;z-index:4;pointer-events:none}
 #ipStickyBar{position:sticky;top:0;pointer-events:auto}
+.copy-toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1000;padding:14px 24px;background:#172033;color:#fff;border-radius:12px;box-shadow:0 14px 40px rgba(18,33,55,.25);font-size:17px;font-weight:650;pointer-events:none}
 #ipStickyBar table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:14px}
 #ipStickyBar th{position:static;top:auto;padding:9px 12px;text-align:left;white-space:nowrap;overflow:hidden;background:#d3e0f0;color:#233a57;border-bottom:1px solid #b7c9df;box-shadow:0 1px 0 #b7c9df}
 #ipStickyBar .th-inner{display:inline-flex;align-items:center;gap:7px;min-height:24px}

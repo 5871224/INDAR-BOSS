@@ -7,7 +7,7 @@ const columnFilters = { ip: '', rule: '', time: '' };
 const thresholdKey = 'indar-boss-ip-threshold';
 const deleteSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg>';
 let sortColumn = 'ip', sortDirection = 'asc', menuColumn = null;
-let preferredThreshold = null, copyToastTimer = null;
+let preferredThreshold = null;
 const currentThreshold = () => preferredThreshold ?? state.threshold;
 function readBrowserThreshold() {
   try {
@@ -26,14 +26,6 @@ function roundedThreshold() {
   const n = Number(raw);
   return Number.isFinite(n) ? Math.ceil(n) : null;
 }
-function showCopyToast() {
-  const toast = $('copyToast');
-  toast.hidden = false;
-  clearTimeout(copyToastTimer);
-  copyToastTimer = setTimeout(() => { toast.hidden = true; }, 2400);
-  copyToastTimer?.unref?.();
-}
-
 function columnText(row, column) {
   if (column === 'ip') return row.ip + ' ' + ipOrder(row.ip);
   if (column === 'rule') return row.rule;
@@ -136,7 +128,8 @@ async function copy(text) {
   try {
     if (!text) throw new Error('沒有可複製的資料');
     await navigator.clipboard.writeText(text);
-    showCopyToast();
+    if ($('blockStatus').classList.contains('status-error')) status('');
+    document.dispatchEvent(new Event('ip-copy-success'));
   } catch (error) { status(error.message || '複製失敗，請確認瀏覽器權限', true); }
 }
 

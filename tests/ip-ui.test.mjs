@@ -4,9 +4,9 @@ import assert from 'node:assert/strict';
 // Exercise actual DOM event handlers and their shared API requests.
 test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async () => {
   const elements = new Map();
-  const element = () => ({
+  const element = () => { const classes = new Set(); return {
     value: '', textContent: '', hidden: true, files: [], dataset: {}, style: {}, open: false, children: [], listeners: {}, attributes: {},
-    classList: { toggle() {} },
+    classList: { toggle(name, value) { if (value) classes.add(name); else classes.delete(name); }, contains(name) { return classes.has(name); } },
     append(...items) { this.children.push(...items); }, replaceChildren(...items) { this.children = [...items]; },
     setAttribute(key, value) { this.attributes[key] = value; }, removeAttribute(key) { delete this.attributes[key]; },
     addEventListener(name, fn) { this.listeners[name] = fn; }, focus() { this.focused = true; },
@@ -18,17 +18,17 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
       function find(node) { if (node.dataset.index === index && index !== undefined) return node; for (const child of node.children) { const found = find(child); if (found) return found; } return null; }
       return find(this);
     }
-  });
+  } };
   const dialogSignals = [];
   globalThis.document = { getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }, createElement: element, addEventListener() {}, dispatchEvent(event) { dialogSignals.push(event.type); } };
   globalThis.window = { frameElement: null, top: { indarAuth: { goToLogin() {} } }, innerWidth: 1024, innerHeight: 768, addEventListener() {} };
   let approve = true; globalThis.confirm = () => approve;
   const browserValues = new Map([['indar-boss-ip-threshold', '8']]);
   globalThis.localStorage = { getItem(key) { return browserValues.get(key) ?? null; }, setItem(key, value) { browserValues.set(key, value); } };
-  let clipboardText = '';
+  let clipboardText = '', clipboardFailure = false;
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
-    value: { clipboard: { writeText: async text => { clipboardText = text; } } }
+    value: { clipboard: { writeText: async text => { if (clipboardFailure) throw new Error('剪貼簿無法使用'); clipboardText = text; } } }
   });
   let shared = { entries: [{ ip: '4.4.4.4', time: '2025/1/1' }], exclusions: ['8.8.8.8'], threshold: 6, revision: 0 }, fail = false, putRequests = 0;
   globalThis.fetch = async (url, options = {}) => {
@@ -134,10 +134,17 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.equal($('columnMenu').hidden, true);
   await $('copyRules').onclick();
   assert.match(clipboardText, /DROP/);
-  assert.equal($('copyToast').hidden, false);
-  // The mock DOM does not parse the static text content from index.html.
-  assert.equal($('copyToast').hidden, false);
-  assert.doesNotMatch($('blockStatus').textContent, /已複製去重後的阻擋規則/);
+  assert.equal(dialogSignals.at(-1), 'ip-copy-success');
+  assert.equal($('blockStatus').textContent, '');
+  clipboardFailure = true;
+  const signalCount = dialogSignals.length;
+  await $('copyRules').onclick();
+  assert.equal(dialogSignals.length, signalCount);
+  assert.equal($('blockStatus').textContent, '剪貼簿無法使用');
+  clipboardFailure = false;
+  await $('copyRules').onclick();
+  assert.equal(dialogSignals.at(-1), 'ip-copy-success');
+  assert.equal($('blockStatus').textContent, '');
 });
 
 test('IP 欄位選單僅顯示必要操作，不顯示說明標題', async () => {
