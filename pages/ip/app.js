@@ -201,7 +201,10 @@ function stopTrackingExclusionDialog() {
   window.parent.removeEventListener('resize', positionExclusionDialog);
   trackingExclusionDialog = false;
 }
-$('exclusionDialog').addEventListener('close', stopTrackingExclusionDialog);
+$('exclusionDialog').addEventListener('close', () => {
+  stopTrackingExclusionDialog();
+  document.dispatchEvent(new Event('ip-dialog-change'));
+});
 function appendExclusionRow(index) {
   const row = document.createElement('tr');
   const number = document.createElement('td'); number.textContent = String(index + 1);
@@ -226,6 +229,7 @@ window.hasUnsavedExclusions = () => $('exclusionDialog').open && meaningfulExclu
 $('openExclusions').onclick = () => {
   exclusionDraft = [...state.exclusions, '']; renderExclusions(); $('exclusionStatus').textContent = '';
   $('exclusionDialog').showModal();
+  document.dispatchEvent(new Event('ip-dialog-change'));
   positionExclusionDialog();
   trackExclusionDialog();
   focusExclusion(exclusionDraft.length - 1);

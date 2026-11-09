@@ -98,6 +98,12 @@ function openIpProxyMenu(button) {
 function syncIpHeader() {
   if (ipPage.hidden || !ipPage.contentDocument) return;
   const doc = ipPage.contentDocument;
+  // An iframe's modal cannot cover siblings in the outer document.
+  if (doc.getElementById('exclusionDialog')?.open) {
+    ipStickyTrack.hidden = true;
+    closeIpProxyMenu();
+    return;
+  }
   const table = doc.querySelector('.table-wrap table');
   const wrap = doc.querySelector('.table-wrap');
   const head = table?.tHead;
@@ -125,7 +131,13 @@ function syncIpHeader() {
   ipStickyBar.querySelectorAll('button[id]').forEach(button => {
     button.addEventListener('click', () => {
       if (button.id.startsWith('columnTool-')) openIpProxyMenu(button);
-      else { doc.getElementById(button.id)?.click(); syncIpHeader(); }
+      else {
+        const sourceButton = doc.getElementById(button.id);
+        // Clipboard writes need focus in the document that owns the action.
+        sourceButton?.focus({ preventScroll: true });
+        sourceButton?.click();
+        syncIpHeader();
+      }
     });
   });
 }
@@ -145,6 +157,7 @@ function resizeIpFrame() {
 ipPage.addEventListener('load', () => {
   const doc = ipPage.contentDocument;
   if (!doc) return;
+  doc.addEventListener('ip-dialog-change', syncIpHeader);
   closeIpProxyMenu();
   ipHeaderSignature = '';
   ipResizeObserver?.disconnect();

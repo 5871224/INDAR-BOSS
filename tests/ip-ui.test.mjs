@@ -19,7 +19,8 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
       return find(this);
     }
   });
-  globalThis.document = { getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }, createElement: element, addEventListener() {} };
+  const dialogSignals = [];
+  globalThis.document = { getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }, createElement: element, addEventListener() {}, dispatchEvent(event) { dialogSignals.push(event.type); } };
   globalThis.window = { frameElement: null, top: { indarAuth: { goToLogin() {} } }, innerWidth: 1024, innerHeight: 768, addEventListener() {} };
   let approve = true; globalThis.confirm = () => approve;
   const browserValues = new Map([['indar-boss-ip-threshold', '8']]);
@@ -68,6 +69,7 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   $('exclusionDialog').getBoundingClientRect = () => ({ height: 480 });
   $('openExclusions').onclick();
   assert.equal($('exclusionDialog').open, true);
+  assert.deepEqual(dialogSignals, ['ip-dialog-change']);
   assert.equal($('exclusionDialog').style.position, 'absolute');
   assert.ok(parseFloat($('exclusionDialog').style.top) >= 500);
   assert.equal(typeof parentHandlers.scroll, 'function');
@@ -84,6 +86,7 @@ test('排除表格可貼上 Excel 資料、驗證與儲存到資料庫', async (
   assert.equal($('exclusionDialog').open, true); assert.match($('exclusionStatus').textContent, /其他使用者/);
   fail = false; await $('saveExclusions').onclick();
   assert.equal($('exclusionDialog').open, false); assert.deepEqual(shared.exclusions, ['8.8.8.8', '7.7.7.7', '1.2.3.4', '9.9.9.9']);
+  assert.deepEqual(dialogSignals, ['ip-dialog-change', 'ip-dialog-change']);
   $('openExclusions').onclick(); input(4).value = 'bad-ip'; $('exclusionRows').listeners.input({ target: input(4) });
   await $('saveExclusions').onclick(); assert.match($('exclusionStatus').textContent, /第 5 列 IP 格式有誤/); assert.equal(input(4).attributes['aria-invalid'], 'true');
   $('closeExclusions').onclick(); assert.equal($('exclusionDialog').open, false);
