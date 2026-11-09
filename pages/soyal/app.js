@@ -1,3 +1,4 @@
+import { createAccountMenu } from '/shared/account-menu.js';
 import {parseBuffer,KNOWN_OFFSETS} from './parser.js';
 import {exportEventExcel} from './event-excel.js';
 
@@ -161,16 +162,14 @@ document.addEventListener('pointerdown', event => {
   if (ipProxyMenu && !ipProxyMenu.contains(event.target) && !ipStickyBar.contains(event.target)) closeIpProxyMenu();
 });
 
-$('#logoutBtn').addEventListener('click',async()=>{
-  const changed=Boolean(ipPage.contentWindow?.hasUnsavedExclusions?.());
-  if((filesLoaded||changed)&&!confirm('目前有尚未保存的資料，登出後將清除畫面內容。確定登出？'))return;
-  const button=$('#logoutBtn');button.disabled=true;$('#headerMessage').textContent='';
-  try{
-    const response=await fetch('/sched/api/v1/auth/sign-out',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});
-    if(!response.ok&&response.status!==401){let data={};try{data=await response.json();}catch{}throw new Error(data.error?.message||data.error||'登出失敗，請稍後再試');}
-    window.indarAuth.goToLogin('/boss/');
-  }catch(error){$('#headerMessage').textContent=error.message||'登出失敗，請稍後再試';}
-  finally{button.disabled=false;}
+const accountMenu=createAccountMenu({
+  container:$('#accountMenu'), messageElement:$('#headerMessage'),
+  beforeSignOut:()=>{
+    const changed=Boolean(ipPage.contentWindow?.hasUnsavedExclusions?.());
+    return !(filesLoaded||changed)||confirm('目前有尚未保存的資料，登出後將清除畫面內容。確定登出？');
+  },
+  onSignedOut:()=>window.indarAuth.goToLogin('/boss/'+(location.hash==='#soyal'?'#soyal':'#ip')),
+  onSessionExpired:()=>showAccessError({status:401})
 });
 
 pickBtn.addEventListener('click',()=>fileInput.click());
@@ -202,11 +201,11 @@ checkAccess().catch(err=>showAccessError(err));
 async function checkAccess(){
   const response=await fetch('./api/access',{credentials:'same-origin',cache:'no-store'});
   let result={};try{result=await response.json();}catch{}
-  if(response.ok){const user=result.user||{};$('#accountName').textContent=user.code?`${user.name||''}（${user.code}）`:user.name||'';accessGranted=true;showPage();accessGate.hidden=true;appShell.hidden=false;loadSettings().catch(error=>{if(error.status===401)showAccessError(error);else $('#headerMessage').textContent='SOYAL 設定讀取失敗，請重新整理或稍後再試。';});return;}
+  if(response.ok){accountMenu.setUser(result.user);accessGranted=true;showPage();accessGate.hidden=true;appShell.hidden=false;loadSettings().catch(error=>{if(error.status===401)showAccessError(error);else {$('#headerMessage').textContent='SOYAL 設定讀取失敗，請重新整理或稍後再試。';$('#headerMessage').classList.add('error');}});return;}
   const error=new Error(typeof result.error==='string'?result.error:(result.error?.message||'無法確認 BOSS 使用權限'));error.status=response.status;throw error;
 }
 function showAccessError(error){
-  if(error.status===401){window.indarAuth.goToLogin('/boss/'+(location.hash==='#ip'?'#ip':''));return;}
+  if(error.status===401){window.indarAuth.goToLogin('/boss/'+(location.hash==='#soyal'?'#soyal':location.hash==='#ip'?'#ip':''));return;}
   appShell.hidden=true;accessGate.hidden=false;
   accessMessage.textContent=error.status===403?'此帳號尚未開放使用 BOSS，請聯絡管理員。':error.status>=500?'BOSS 權限服務暫時無法使用，請稍後再試。':error.message;
   accessMessage.classList.add('error');

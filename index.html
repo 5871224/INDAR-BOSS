@@ -6,6 +6,7 @@
   <title>INDAR-BOSS｜SOYAL MSG Viewer</title>
   <link rel="stylesheet" href="pages/soyal/styles.css" />
   <link rel="stylesheet" href="pages/shared/action-icons.css" />
+  <link rel="stylesheet" href="/shared/account-menu.css" />
   <script src="/shared/auth-entry.js"></script>
 </head>
 <body>
@@ -17,7 +18,7 @@
   <main class="wrap" id="appShell" hidden>
     <header class="header">
       <div class="brand"><a class="brand-mark" href="/" aria-label="英達首頁">INDAR</a><span class="brand-name" aria-current="page">BOSS</span></div>
-      <div class="header-account"><strong id="accountName"></strong><button id="logoutBtn" type="button" class="logout-link">登出</button></div>
+      <div id="accountMenu" class="header-account" hidden></div>
     </header>
     <p id="headerMessage" class="header-message" role="status"></p>
 

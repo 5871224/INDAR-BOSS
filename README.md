@@ -76,7 +76,7 @@ BOSS 不另外建立第二組使用者密碼：一般使用者沿用 INDAR 班�
 
 導向登入使用 INDAR 入口維護的 `/shared/auth-entry.js`；請先發布 INDAR 的共用登入頁及腳本，再發布本頁。
 
-標頭顯示 BOSS 權限 API 回傳的員工姓名與代碼；登出會結束共用 INDAR 登入工作階段。若畫面有尚未保存的資料，登出前會提示確認。
+IP 檢查與 SOYAL 共用首頁相同的姓名按鈕，引用 INDAR 入口的 `/shared/account-menu.js` 與 `/shared/account-menu.css`；點選姓名可修改班表密碼（4～128 碼並再次確認）或登出共用 INDAR Session。若畫面有尚未保存的資料，登出前仍會提示確認。直接開啟 `pages/ip/` 時會回到 `/boss/#ip`，讓所有 IP 頁面使用同一個標頭。請先發布 INDAR 共用元件，再發布 BOSS。
 
 若要把現有 Supabase 設定資料帶入新 database，先完成建庫、schema 與 `/etc/indar-soyal/database.env`，再執行：
 

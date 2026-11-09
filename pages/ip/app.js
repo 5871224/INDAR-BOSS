@@ -331,6 +331,7 @@ $('events').onchange = event => fileAction(event.target, async files => {
 });
 
 async function start() {
+  if (window.top === window) { window.location.replace('../../#ip'); return; }
   try {
     const response = await fetch('../../api/access', { credentials: 'same-origin', cache: 'no-store' });
     if (response.status === 401) { window.top.indarAuth.goToLogin('/boss/#ip'); return; }
